@@ -2,6 +2,27 @@
 
 > **Purpose**: Comprehensive reference for system design concepts, patterns, and techniques for technical interviews and real-world architecture decisions.
 
+---
+
+## 📚 System Design Resources
+
+This is the master index for all system design documentation. As we add more detailed guides, they will be linked here.
+
+### Available Guides
+
+- **[This Document]** - Complete System Design Techniques (Overview & Fundamentals)
+
+### Upcoming Detailed Guides
+
+More in-depth guides will be added here as they are created:
+- *Load Balancing Deep Dive* (Coming Soon)
+- *Database Sharding Strategies* (Coming Soon)
+- *Microservices Architecture Patterns* (Coming Soon)
+- *Event-Driven Architecture* (Coming Soon)
+- *API Gateway Patterns* (Coming Soon)
+
+---
+
 ## Table of Contents
 
 1. [Core System Design Fundamentals](#1-core-system-design-fundamentals)

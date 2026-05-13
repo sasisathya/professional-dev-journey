@@ -51,6 +51,10 @@ Welcome to the complete Java documentation in simple English! This repository is
 - [File I/O](./06-Advanced-Topics/04-File-IO.md)
 - [Annotations](./06-Advanced-Topics/05-Annotations.md)
 
+### 7. [System Design](./system-design)
+- [System Design Foundations](./system-design/README.md)
+- [Scalability Complete Guide](./system-design/02-scalability-complete-guide.md)
+
 ## 🚀 How to Use This Documentation
 
 1. **Start with Basics**: If you're new to Java, begin with the [Java Basics](./01-Java-Basics) section
@@ -65,10 +69,6 @@ This documentation aims to:
 - Provide **clear examples** for each concept
 - Organize content for **easy navigation**
 - Help both **beginners and intermediate** learners
-
-### 7. [System Design](./system-design)
-- [System Design Foundations](./system-design/README.md)
-- [Scalability Complete Guide](./system-design/02-scalability-complete-guide.md) - **NEW!** Professional 20-min guide
 
 ## 🤝 Contributing
 

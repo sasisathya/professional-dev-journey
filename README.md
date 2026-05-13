@@ -66,6 +66,10 @@ This documentation aims to:
 - Organize content for **easy navigation**
 - Help both **beginners and intermediate** learners
 
+### 7. [System Design](./system-design)
+- [System Design Foundations](./system-design/README.md)
+- [Scalability Complete Guide](./system-design/02-scalability-complete-guide.md) - **NEW!** Professional 20-min guide
+
 ## 🤝 Contributing
 
 Feel free to contribute by:

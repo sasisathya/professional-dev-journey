@@ -12,20 +12,15 @@ This is the master index for all system design documentation. As we add more det
 
 - **[This Document]** - Complete System Design Techniques (Overview & Fundamentals)
 - **[Scalability Complete Guide](./02-scalability-complete-guide.md)** - Professional deep-dive into scalability (20-min guide)
-  - Vertical vs Horizontal Scaling
-  - Load Balancing Algorithms & Strategies
-  - Database Scalability (Replication, Sharding)
-  - Caching Patterns (Cache-Aside, Write-Through, Write-Behind)
-  - Microservices & Distributed Systems
-  - Real-World Examples (Netflix, Uber, Twitter, Instagram)
-  - Java & JavaScript Implementation Examples
 
 ### Upcoming Detailed Guides
 
 More in-depth guides will be added here as they are created:
+- *Load Balancing Deep Dive* (Coming Soon)
+- *Database Sharding Strategies* (Coming Soon)
+- *Microservices Architecture Patterns* (Coming Soon)
 - *Event-Driven Architecture* (Coming Soon)
 - *API Gateway Patterns* (Coming Soon)
-- *Service Mesh Deep Dive* (Coming Soon)
 
 ---
 

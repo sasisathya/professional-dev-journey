@@ -1,6 +1,17 @@
-# Java Documentation - Simple & Complete
+# Professional Development Journey
 
-Welcome to the complete Java documentation in simple English! This repository is organized by concepts to make learning Java easy and structured.
+Welcome to your complete professional development repository! This includes structured learning plans, comprehensive documentation, and hands-on guides.
+
+## 🔥 Current Active Plan
+
+### [20-Day Intensive Mastery Plan](./20-DAY-MASTERY-PLAN.md) - START HERE!
+**Status:** Day 1 - May 18, 2026
+- **Daily Commitment:** 4.5 hours (9 topics × 30 min each)
+- **Topics:** Node.js, JavaScript, React, Java, Spring Boot, DevOps, GCP, System Design, DSA
+- **Goal:** Advanced/Pro level in 20 days
+- **[View All Daily Guides](./daily-study-guides/README.md)**
+
+---
 
 ## 📚 Table of Contents
 

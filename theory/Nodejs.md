@@ -100,6 +100,254 @@ Response    Thread Pool (Libuv)
 
 ---
 
+## The Event Loop - Deep Dive into Phases
+
+The event loop is the engine that handles asynchronous operations in JavaScript (like Node.js and browsers). It cycles through a series of specific phases, executing the callbacks stored in the queue for each phase.
+
+### Understanding Event Loop Phases
+
+The core phases of the Node.js event loop cycle sequentially through six distinct phases. Each phase has a specific purpose and maintains its own queue of callbacks to execute.
+
+---
+
+### Phase 1: Timers ⏱️
+
+**Purpose**: Executes callbacks scheduled by `setTimeout()` and `setInterval()`.
+
+**How it works**:
+- Checks if any timers have reached their threshold time
+- Executes the callbacks for expired timers
+- Does NOT guarantee exact timing (depends on system performance and other callbacks)
+
+**Example**:
+```javascript
+setTimeout(() => {
+  console.log('Timer executed');
+}, 100); // Executes after approximately 100ms
+```
+
+**Key Points**:
+- Timers are not guaranteed to execute at exact time
+- They execute as close as possible to the scheduled time
+- System performance can affect timing
+
+---
+
+### Phase 2: Pending Callbacks 📋
+
+**Purpose**: Executes I/O callbacks that were deferred to the next loop iteration.
+
+**How it works**:
+- Handles callbacks from previous operations that were postponed
+- Mainly for internal system operations
+- Examples: TCP errors, system-level operations
+
+**Typical scenarios**:
+- TCP socket errors (ECONNREFUSED)
+- System-level callback deferrals
+- Some types of system errors
+
+**Key Points**:
+- Mostly internal to Node.js
+- Not commonly encountered in application code
+- Handles edge cases and system callbacks
+
+---
+
+### Phase 3: Idle, Prepare 🔧
+
+**Purpose**: Internal phase used only for Node.js housekeeping.
+
+**How it works**:
+- Runs internal Node.js operations
+- Not accessible to user code
+- Prepares for the next phase
+
+**Key Points**:
+- Internal to Node.js internals
+- No user callbacks executed here
+- Purely for system maintenance
+
+---
+
+### Phase 4: Poll 🔄
+
+**Purpose**: Retrieves new I/O events and executes I/O-related callbacks.
+
+**How it works**:
+- Waits for new I/O events
+- Executes callbacks for completed I/O operations
+- Most important phase for handling incoming connections and data
+
+**This phase handles**:
+- File system operations callbacks
+- Network operations (HTTP requests, database queries)
+- Almost all callbacks except timers, setImmediate(), and close callbacks
+
+**Key Behavior**:
+- If the poll queue is not empty, it executes callbacks synchronously until queue is empty
+- If the poll queue is empty:
+  - If `setImmediate()` callbacks exist, it moves to the Check phase
+  - If no `setImmediate()` exists, it waits for new callbacks
+
+**Example**:
+```javascript
+fs.readFile('file.txt', (err, data) => {
+  // This callback executes in the Poll phase
+  console.log(data);
+});
+```
+
+**Key Points**:
+- Most application callbacks execute here
+- Can block if callbacks take too long
+- Critical for I/O operations
+
+---
+
+### Phase 5: Check ✅
+
+**Purpose**: Executes callbacks scheduled by `setImmediate()`.
+
+**How it works**:
+- Runs immediately after the Poll phase completes
+- Allows you to execute code immediately after I/O events
+- Always executes before timers if both are scheduled simultaneously
+
+**Example**:
+```javascript
+setImmediate(() => {
+  console.log('Executed in Check phase');
+});
+```
+
+**setImmediate() vs setTimeout()**:
+```javascript
+setTimeout(() => {
+  console.log('setTimeout');
+}, 0);
+
+setImmediate(() => {
+  console.log('setImmediate');
+});
+
+// Output order varies depending on when called
+// Inside I/O cycle: setImmediate always executes first
+// Outside I/O cycle: order is non-deterministic
+```
+
+**Key Points**:
+- Designed for executing code after I/O operations
+- More predictable than `setTimeout(fn, 0)` within I/O cycles
+- Preferred for deferring work after I/O completion
+
+---
+
+### Phase 6: Close Callbacks 🚪
+
+**Purpose**: Handles close events, such as a socket or stream being destroyed.
+
+**How it works**:
+- Executes cleanup callbacks
+- Triggered when connections are closed
+- Handles resource cleanup
+
+**Example**:
+```javascript
+socket.on('close', () => {
+  console.log('Socket closed');
+  // Cleanup code here
+});
+
+server.on('close', () => {
+  console.log('Server shut down');
+});
+```
+
+**Common scenarios**:
+- Socket connections closing (`.on('close')`)
+- Server shutdown events
+- Stream destruction
+- Resource cleanup operations
+
+**Key Points**:
+- Ensures proper cleanup of resources
+- Prevents memory leaks
+- Last phase before loop repeats
+
+---
+
+### Event Loop Cycle - Visual Representation
+
+```
+   ┌───────────────────────────┐
+┌─>│        Timers             │  setTimeout, setInterval
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │    Pending Callbacks      │  I/O callbacks deferred
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │     Idle, Prepare         │  Internal use only
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │         Poll              │  Retrieve I/O events
+│  │  (most callbacks here)    │  Execute I/O callbacks
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │        Check              │  setImmediate callbacks
+│  └─────────────┬─────────────┘
+│  ┌─────────────┴─────────────┐
+│  │    Close Callbacks        │  socket.on('close')
+│  └─────────────┬─────────────┘
+└────────────────┘
+     (Repeat)
+```
+
+---
+
+### Microtasks Queue (Special Priority)
+
+In addition to the six phases, Node.js also has a **microtasks queue** that has higher priority:
+
+**Types of Microtasks**:
+- `process.nextTick()` - Highest priority
+- Promise callbacks (`.then()`, `.catch()`, `.finally()`)
+
+**Execution Priority**:
+1. `process.nextTick()` queue (executes before any phase)
+2. Promise microtask queue
+3. Then moves to the next event loop phase
+
+**Example**:
+```javascript
+setTimeout(() => console.log('setTimeout'), 0);
+setImmediate(() => console.log('setImmediate'));
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('Promise'));
+
+// Output order:
+// nextTick (highest priority)
+// Promise (microtask)
+// setTimeout or setImmediate (varies)
+```
+
+**Key Points**:
+- Microtasks execute between phases
+- `process.nextTick()` can cause starvation if overused
+- Promises execute after `process.nextTick()` but before phase callbacks
+
+---
+
+### Best Practices
+
+✅ **Use setImmediate() for I/O-bound callbacks** instead of `setTimeout(fn, 0)`
+✅ **Avoid long-running callbacks** in any phase to prevent blocking
+✅ **Be careful with process.nextTick()** - can starve the event loop
+✅ **Use Promises** for cleaner asynchronous code
+✅ **Monitor event loop lag** in production applications
+
+---
+
 ## Key Advantages
 
 ✅ **High Performance**: V8 engine compiles JavaScript to machine code

@@ -1,6 +1,5 @@
 # Day 18 - Serverless & Edge Computing
 
-**Date:** June 4, 2026
 **Focus:** Serverless architectures, edge computing, modern deployment
 
 ---

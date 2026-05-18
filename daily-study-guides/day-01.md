@@ -1,6 +1,5 @@
 # Day 1 - Foundations & Core Concepts
 
-**Date:** May 18, 2026 (TODAY - DAY 1!)
 **Focus:** Core fundamentals, strengthen base knowledge
 
 ---

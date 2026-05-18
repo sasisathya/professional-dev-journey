@@ -1,6 +1,5 @@
 # Day 16 - Distributed Systems & Consensus
 
-**Date:** June 2, 2026
 **Focus:** Distributed consensus, coordination, expert-level patterns
 
 ---

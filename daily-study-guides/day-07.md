@@ -1,6 +1,5 @@
 # Day 7 - Behavioral Patterns & Service Communication
 
-**Date:** May 24, 2026
 **Focus:** Behavioral patterns, messaging systems, service mesh
 
 ## 🔗 Quick Links to Concepts

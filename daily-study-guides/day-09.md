@@ -1,6 +1,5 @@
 # Day 9 - Security & Authentication Deep Dive
 
-**Date:** May 26, 2026
 **Focus:** Security hardening, authentication, authorization, testing
 
 ## 🔗 Quick Links to Concepts

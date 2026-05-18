@@ -1,6 +1,5 @@
 # Day 6 - Design Patterns & Microservices Intro
 
-**Date:** May 23, 2026
 **Focus:** Design patterns, architecture patterns, microservices foundations
 
 ## 🔗 Quick Links to Concepts

@@ -1,6 +1,5 @@
 # Day 10 - Performance & Optimization
 
-**Date:** May 27, 2026
 **Focus:** Performance optimization, caching strategies, CDN, profiling
 
 ## 🔗 Quick Links to Concepts

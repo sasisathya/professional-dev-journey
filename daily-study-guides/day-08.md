@@ -1,6 +1,5 @@
 # Day 8 - Observability & Advanced Patterns
 
-**Date:** May 25, 2026
 **Focus:** Observability, concurrency, resilience patterns
 
 ## 🔗 Quick Links to Concepts

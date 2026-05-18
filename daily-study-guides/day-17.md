@@ -1,6 +1,5 @@
 # Day 17 - Modern API Protocols & Communication
 
-**Date:** June 3, 2026
 **Focus:** GraphQL, gRPC, advanced communication protocols
 
 ---

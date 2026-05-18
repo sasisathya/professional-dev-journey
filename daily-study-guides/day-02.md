@@ -1,6 +1,5 @@
 # Day 2 - Async Patterns & Collections
 
-**Date:** May 19, 2026
 **Focus:** Asynchronous patterns, data structures, HTTP basics
 
 ## 🔗 Quick Links to Concepts

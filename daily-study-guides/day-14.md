@@ -1,6 +1,5 @@
 # Day 14 - System Reliability & Advanced Algorithms
 
-**Date:** May 31, 2026
 **Focus:** Chaos engineering, reliability, advanced algorithms
 
 ---

@@ -1,6 +1,5 @@
 # Day 12 - Real-Time Systems & Data Streaming
 
-**Date:** May 29, 2026
 **Focus:** WebSockets, streaming, real-time data processing
 
 ---

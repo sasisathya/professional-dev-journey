@@ -1,6 +1,5 @@
 # Day 11 - Advanced Architectures & Distributed Systems
 
-**Date:** May 28, 2026
 **Focus:** Microservices patterns, event-driven architecture, distributed systems
 
 ---

@@ -1,6 +1,5 @@
 # Day 13 - Database Optimization & Advanced Queries
 
-**Date:** May 30, 2026
 **Focus:** Database performance, indexing, query optimization, NoSQL
 
 ---

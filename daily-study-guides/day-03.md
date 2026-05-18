@@ -1,6 +1,5 @@
 # Day 3 - Streams, Advanced Features & Storage
 
-**Date:** May 20, 2026
 **Focus:** Streams, modern features, persistence, storage solutions
 
 ## 🔗 Quick Links to Concepts

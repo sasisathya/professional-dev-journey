@@ -125,7 +125,7 @@ Data privacy (private variables), factory functions, function currying, callback
 ### React.js Concepts
 
 **useState**
-A React Hook that lets you add state to functional components. Returns an array with current state value and a function to update it. Example: `const [count, setCount] = useState(0)`.
+useState is a Hook that allows functional components to maintain local state. React stores state internally in Fiber Hook objects and updates it through an update queue, triggering efficient re-renders when state changes. Example: `const [count, setCount] = useState(0)`.
 
 **useEffect**
 A Hook for side effects (data fetching, subscriptions, DOM manipulation). Runs after render. Can return a cleanup function and accepts a dependency array to control when it runs.

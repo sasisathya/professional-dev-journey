@@ -395,6 +395,28 @@ const [data1, data2] = await Promise.all([
 
 ---
 
+### Promise Patterns & Advanced Async Methods
+
+**Promise.all():** Executes multiple Promises in parallel. Returns array of results in order. Rejects immediately if any Promise rejects (fail-fast behavior). Best for dependent operations requiring all results.
+
+**Promise.allSettled():** Executes multiple Promises in parallel. Waits for ALL to settle (resolve or reject). Never rejects. Returns array of `{status, value/reason}` objects. Best for independent operations where partial failure is acceptable.
+
+**Promise.race():** Executes multiple Promises in parallel. Returns result/error of first to settle. Useful for implementing timeouts and competing requests. Other Promises continue executing but results ignored.
+
+**Promise.any():** Executes multiple Promises in parallel. Returns first fulfilled Promise. Only rejects if ALL reject with AggregateError. Better than race for retry logic (ignores rejections until all fail).
+
+**Promise.resolve(value):** Returns Promise resolved with value. Useful for wrapping non-Promise values. If passed Promise, returns that Promise as-is.
+
+**Promise.reject(error):** Returns Promise rejected with error. Useful for error handling chains. Immediately enters catch block.
+
+**Key difference:** `all` = fail-fast (one failure stops all), `allSettled` = wait for all regardless, `race` = first to settle, `any` = first success only.
+
+**Interview note:** "Use `Promise.all()` for dependent operations. Use `Promise.allSettled()` for independent operations with partial failure tolerance."
+
+**Key takeaway:** Different combinators for different scenarios. all = parallel fail-fast, allSettled = all results, race = fastest, any = first success.
+
+---
+
 ## Streams & Buffers
 
 ### Buffers
@@ -595,29 +617,37 @@ if (cluster.isMaster) {
 ---
 
 ### Worker Threads
-**Definition:** Execute JavaScript in parallel threads for CPU-intensive tasks.
+**Definition:** Execute JavaScript in parallel threads for CPU-intensive tasks. Each worker has own V8 instance and event loop, true parallelism (not event loop scheduling).
 
-```javascript
-const { Worker } = require('worker_threads');
+**Key characteristics:**
+- Independent V8 engines (true parallelism vs event loop delegation)
+- Isolated memory space per worker
+- Message-passing communication (no shared memory by default)
+- Worker data passed at creation time
 
-const worker = new Worker('./worker.js', {
-  workerData: { num: 5 }
-});
+**When to use:** CPU-intensive operations (calculations, crypto, compression, JSON parsing), image processing, heavy data transformations. Prevents blocking event loop.
 
-worker.on('message', (result) => {
-  console.log('Result:', result);
-});
-```
+**When NOT to use:** I/O-bound operations (use event loop). High overhead for trivial tasks.
 
-**worker.js:**
-```javascript
-const { parentPort, workerData } = require('worker_threads');
+**Communication mechanisms:**
+1. **Message passing:** Default. `parentPort.postMessage()`, `worker.postMessage()`. Slower but safer.
+2. **Transferable objects:** Transfer large buffers without copying (ArrayBuffer ownership transferred). Buffer becomes unusable in sender.
+3. **SharedArrayBuffer:** True shared memory between threads. Atomic operations required. High concurrency but complex.
 
-const result = heavyComputation(workerData.num);
-parentPort.postMessage(result);
-```
+**Worker pool pattern:** Multiple workers queued for tasks. Route tasks to available workers, queue if all busy. Scales CPU-bound workloads across CPU cores efficiently.
 
-**Key takeaway:** Worker threads = CPU-intensive tasks. Parallel execution.
+**Cluster vs Worker Threads:**
+
+| Aspect | Cluster | Worker Threads |
+|--------|---------|----------------|
+| Use case | I/O-bound, web servers | CPU-bound tasks |
+| Parallelism | Separate processes | Threads in same process |
+| Memory | High (separate heap) | Low (shared process) |
+| Communication | IPC (slow) | Message passing (fast) |
+| Startup | Slower (fork process) | Faster (create thread) |
+| Shared state | None (separate processes) | Can use SharedArrayBuffer |
+
+**Key takeaway:** Worker threads = true parallelism for CPU tasks. Thread pool for scaling. Transferable objects for zero-copy. SharedArrayBuffer for high-performance concurrency.
 
 ---
 

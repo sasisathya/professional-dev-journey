@@ -35,7 +35,8 @@
       "Bash(tree:*)",
       "WebSearch",
       "Bash(mkdir:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git *)"
     ],
     "deny": [],
     "ask": []

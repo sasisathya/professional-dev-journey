@@ -257,6 +257,82 @@
 
 ---
 
+### useTransition
+**What it does:** Marks state update as non-urgent. React can interrupt it to handle urgent updates (user input, animations).
+
+**How it works:**
+```javascript
+const [isPending, startTransition] = useTransition();
+
+const handleFilter = (newFilter) => {
+  startTransition(() => {
+    setFilter(newFilter); // non-urgent state update
+  });
+};
+// If user types while filtering, React pauses filter, handles keystroke, then resumes filter
+```
+
+**Why it matters:** Without it, updating a large list causes janky UI. Browser can't respond to input until list finishes rendering.
+
+**With useTransition:** User's keystroke is marked urgent. React pauses the list update, handles input, then resumes. Feels responsive.
+
+**When to use:**
+- Filtering/searching large lists
+- Sorting/re-rendering expensive operations
+- Any state update that might block user interaction
+
+**Difference from debounce:** useTransition doesn't delay the update, it interrupts and resumes. User sees feedback immediately (loading state), not stalling.
+
+**Key takeaway:** useTransition makes expensive updates non-blocking. User input always feels responsive.
+
+---
+
+### useDeferredValue
+**What it does:** Defers updating a value until more urgent work finishes.
+
+**How it works:**
+```javascript
+const [searchText, setSearchText] = useState('');
+const deferredText = useDeferredValue(searchText);
+
+// searchText updates immediately (input feels responsive)
+// deferredText updates lazily (expensive search runs later)
+// Can show stale results while new results calculate
+```
+
+**Difference from useTransition:**
+- **useTransition:** You control which state updates are non-urgent
+- **useDeferredValue:** You defer a VALUE, not state updates. More passive.
+
+**When to use:**
+- Passing prop that's expensive to render to child component
+- Search input → expensive results list
+- You can't wrap the state setter in startTransition (value comes from parent)
+
+**Real example:**
+```javascript
+// Parent controls input
+<input value={search} onChange={e => setSearch(e.target.value)} />
+// Pass deferred value to expensive list
+<SearchResults query={useDeferredValue(search)} />
+// Results component can check if value is stale
+const SearchResults = ({ query }) => {
+  const [isPending, startTransition] = useTransition();
+  // Re-render with stale value until new results ready
+};
+```
+
+**When NOT to use:**
+- Simple/fast updates (overhead > benefit)
+- Real-time multiplayer (lag is bad UX)
+- Critical data (don't show stale to user)
+
+**Production insight:** Most apps don't need these. useTransition/useDeferredValue are for genuinely expensive renders that block interaction. If your filter/search is fast, skip it. Measure first.
+
+**Key takeaway:** useTransition for non-urgent state updates. useDeferredValue for deferred props. Both prevent janky UI during expensive renders.
+
+---
+
 ### Custom Hooks
 **What it is:** A JavaScript function that uses React Hooks. Reuses stateful logic without duplicating code.
 
@@ -1321,24 +1397,6 @@ The wisdom: Always measure. 90% of React performance problems aren't React—the
 - File organization
 - Scaling problems
 
-### What NOT to Say in Interviews
-
-- "I always use X" (no mention of tradeoffs)
-- "I use Context for state management" (Context isn't a state manager)
-- "Just add React.memo everywhere" (premature optimization)
-- "I don't need to measure, I know it's slow" (guess work)
-- "Virtual DOM is faster than real DOM" (wrong, it's about less actual DOM updates)
-
-### Red Flags to Avoid
-
-- Not including all dependencies in useEffect
-- Using array index as key in lists
-- Not cleaning up effects (subscriptions, timers)
-- Mutating props
-- Not separating concerns (mixing UI, data, business logic)
-
----
-
 ---
 
 ## What's Actually Worth Learning in 2026
@@ -1411,4 +1469,4 @@ The wisdom: Always measure. 90% of React performance problems aren't React—the
 
 ---
 
-**Updated:** 2026-08-14 | **Level:** Intermediate-Advanced (Interview Ready) + 10+ Years Production Wisdom | **Format:** Clear definitions with production context and real-world insights**
+**Level:** Intermediate-Advanced + 10+ Years Production Wisdom | **Updated:** 2026-08-16

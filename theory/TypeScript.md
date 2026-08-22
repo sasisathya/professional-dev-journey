@@ -5,10 +5,14 @@
 2. [Type System](#type-system)
 3. [Interfaces & Types](#interfaces--types)
 4. [Advanced Types](#advanced-types)
-5. [Generics](#generics)
-6. [Classes & OOP](#classes--oop)
-7. [Modules & Namespaces](#modules--namespaces)
-8. [Best Practices & Configuration](#best-practices--configuration)
+5. [TypeScript 5.x Features](#typescript-5x-features)
+6. [Generics](#generics)
+7. [Classes & OOP](#classes--oop)
+8. [Modules & Namespaces](#modules--namespaces)
+9. [Best Practices & Configuration](#best-practices--configuration)
+10. [React & TypeScript](#react--typescript)
+11. [Production Patterns & Pitfalls](#production-patterns--pitfalls)
+12. [Interview Tips](#interview-tips-expanded)
 
 ---
 
@@ -552,6 +556,312 @@ type EventHandler = `on${Capitalize<EventName>}`;
 
 ---
 
+### Discriminated Unions
+**Definition:** Union types where each variant has a common literal property to distinguish them.
+
+**Pattern (very common in React):**
+```typescript
+type LoadingState = {
+  status: 'loading';
+  progress: number;
+};
+
+type SuccessState = {
+  status: 'success';
+  data: string[];
+};
+
+type ErrorState = {
+  status: 'error';
+  error: Error;
+};
+
+type AsyncState = LoadingState | SuccessState | ErrorState;
+
+// Type narrowing via discriminator
+function handleState(state: AsyncState) {
+  if (state.status === 'loading') {
+    console.log(state.progress); // OK, progress is number
+  } else if (state.status === 'success') {
+    console.log(state.data); // OK, data is string[]
+  } else {
+    console.log(state.error); // OK, error is Error
+  }
+}
+```
+
+**Real React example (form submission):**
+```typescript
+type FormState = 
+  | { type: 'idle' }
+  | { type: 'submitting' }
+  | { type: 'success'; data: User }
+  | { type: 'error'; message: string };
+
+function FormStatus({ state }: { state: FormState }) {
+  switch (state.type) {
+    case 'idle':
+      return <form>...</form>;
+    case 'submitting':
+      return <p>Saving...</p>;
+    case 'success':
+      return <p>Saved! User: {state.data.name}</p>;
+    case 'error':
+      return <p>Error: {state.message}</p>;
+  }
+}
+```
+
+**Why it's powerful:** TypeScript ensures you handle all cases. Change discriminator value = compile error everywhere.
+
+**Key takeaway:** Discriminated unions = exhaustive type checking. Perfect for state machines.
+
+---
+
+### Type Predicates (Type Guards)
+**Definition:** Functions that return `value is Type` to narrow union types.
+
+```typescript
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number';
+}
+
+// Usage
+const value: unknown = "hello";
+if (isString(value)) {
+  value.toUpperCase(); // OK, value is string
+}
+```
+
+**Real example (API response):**
+```typescript
+interface SuccessResponse {
+  type: 'success';
+  data: { name: string };
+}
+
+interface ErrorResponse {
+  type: 'error';
+  error: string;
+}
+
+type ApiResponse = SuccessResponse | ErrorResponse;
+
+// Type predicate
+function isSuccess(response: ApiResponse): response is SuccessResponse {
+  return response.type === 'success';
+}
+
+// Usage
+function handleResponse(response: ApiResponse) {
+  if (isSuccess(response)) {
+    console.log(response.data.name); // OK, data is available
+  } else {
+    console.log(response.error); // OK, error is available
+  }
+}
+```
+
+**React example (React.Children):**
+```typescript
+function isValidElement(element: unknown): element is React.ReactElement {
+  return React.isValidElement(element);
+}
+
+function renderChildren(children: unknown) {
+  if (isValidElement(children)) {
+    return children;
+  }
+  return null;
+}
+```
+
+**Key takeaway:** Type predicates narrow unions reliably. Better than typeof checks scattered everywhere.
+
+---
+
+### Assertion Signatures
+**Definition:** Functions that assert a type and throw if false.
+
+```typescript
+function assertIsString(value: unknown): asserts value is string {
+  if (typeof value !== 'string') {
+    throw new Error(`Expected string, got ${typeof value}`);
+  }
+}
+
+// Usage
+function process(value: unknown) {
+  assertIsString(value);
+  // value is now string
+  console.log(value.toUpperCase());
+}
+```
+
+**Real example (environment variables):**
+```typescript
+function assertEnv(key: string): asserts process.env[key] is string {
+  if (!process.env[key]) {
+    throw new Error(`Environment variable ${key} is required`);
+  }
+}
+
+// Usage
+assertEnv('API_KEY');
+const apiKey = process.env.API_KEY; // TypeScript knows it's string
+```
+
+**Key takeaway:** Assertion signatures for validation. Throw if assertion fails.
+
+---
+
+### const Type Parameters
+**Definition:** (TypeScript 5.0+) Preserve literal types through generics.
+
+```typescript
+// Before TS 5.0
+function createSet<T>(value: T): Set<T> {
+  return new Set([value]);
+}
+
+const numSet = createSet(42);
+// numSet: Set<42> ← loses literal type
+
+// After TS 5.0
+function createSet<const T>(value: T): Set<T> {
+  return new Set([value]);
+}
+
+const numSet = createSet(42);
+// numSet: Set<42> ← preserves literal type!
+```
+
+**Real example (type-safe config):**
+```typescript
+function createConfig<const T extends Record<string, any>>(config: T): T {
+  return config;
+}
+
+const config = createConfig({
+  mode: 'production', // Literal type preserved
+  timeout: 5000        // Literal type preserved
+} as const);
+
+// Accessing properties is type-safe
+config.mode; // type: 'production' (not string)
+```
+
+**Why it matters:** Preserves literal types without `as const`. Cleaner APIs.
+
+**Key takeaway:** `const` type parameters preserve literal types. (TS 5.0+)
+
+---
+
+### satisfies Operator
+**Definition:** (TypeScript 4.9+) Validate type without changing inferred type.
+
+```typescript
+// Without satisfies
+const config1: AppConfig = {
+  debug: true,
+  port: 3000
+};
+// config1: AppConfig
+
+// With satisfies
+const config2 = {
+  debug: true,
+  port: 3000
+} satisfies AppConfig;
+// config2: { debug: boolean; port: number } (more specific)
+```
+
+**Real example (color literals):**
+```typescript
+type Color = 'red' | 'green' | 'blue';
+
+// Without satisfies - type is Record<string, string>
+const colors = {
+  primary: 'red',
+  secondary: 'blue'
+};
+// colors.primary: string (not 'red')
+
+// With satisfies - type preserves literals
+const colors2 = {
+  primary: 'red',
+  secondary: 'blue'
+} satisfies Record<string, Color>;
+// colors2.primary: 'red' (literal type!)
+```
+
+**React props example:**
+```typescript
+type ButtonProps = {
+  variant: 'primary' | 'secondary';
+  size: 'sm' | 'md' | 'lg';
+};
+
+const buttonDefaults = {
+  variant: 'primary',
+  size: 'md'
+} satisfies ButtonProps;
+// buttonDefaults.variant: 'primary' (not string)
+```
+
+**Key takeaway:** `satisfies` validates without widening types. Perfect for defaults.
+
+---
+
+### as const Assertions
+**Definition:** Assert value as readonly literal type.
+
+```typescript
+// Without as const
+const colors = ['red', 'green', 'blue'];
+// type: string[]
+
+// With as const
+const colors2 = ['red', 'green', 'blue'] as const;
+// type: readonly ['red', 'green', 'blue']
+```
+
+**When to use:**
+```typescript
+// API routes
+const ROUTES = ['/api/users', '/api/posts', '/api/comments'] as const;
+type Route = typeof ROUTES[number]; // '/api/users' | '/api/posts' | '/api/comments'
+
+// Form fields
+const FORM_FIELDS = {
+  email: 'email',
+  password: 'password',
+  username: 'username'
+} as const;
+
+type FieldName = keyof typeof FORM_FIELDS; // 'email' | 'password' | 'username'
+
+// Component variants
+const Button = ({ variant }: { variant: 'primary' | 'secondary' }) => {};
+
+// Instead of hardcoding union, use object keys
+const VARIANTS = {
+  primary: { bg: 'blue' },
+  secondary: { bg: 'gray' }
+} as const;
+
+type Variant = keyof typeof VARIANTS;
+const Button2 = ({ variant }: { variant: Variant }) => {};
+```
+
+**Key takeaway:** `as const` for literal types. Extract types from values.
+
+---
+
 ## Generics
 
 ### Generic Functions
@@ -1052,37 +1362,414 @@ interface User {
 ---
 
 ### TypeScript with React
-**Functional component:**
-```typescript
-import React, { FC } from 'react';
 
-interface Props {
+#### Functional Components
+
+**Basic component (prefer over FC):**
+```typescript
+interface GreetingProps {
   name: string;
   age: number;
+  onGreet?: (name: string) => void; // Optional callback
 }
 
-const Greeting: FC<Props> = ({ name, age }) => {
-  return <div>Hello {name}, age {age}</div>;
+export function Greeting({ name, age, onGreet }: GreetingProps) {
+  return (
+    <div onClick={() => onGreet?.(name)}>
+      Hello {name}, age {age}
+    </div>
+  );
+}
+```
+
+**Why not FC:**
+- `FC` (FunctionComponent) is outdated
+- Doesn't support generics well
+- Implicit children typing
+- Modern: Just use function with Props interface
+
+**Extending HTML attributes (button that extends native button):**
+```typescript
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function Button({ 
+  variant = 'primary', 
+  size = 'md', 
+  className,
+  ...rest 
+}: ButtonProps) {
+  return (
+    <button
+      className={`btn btn-${variant} btn-${size} ${className}`}
+      {...rest}
+    />
+  );
+}
+
+// Usage: supports all native button props + custom props
+<Button variant="primary" onClick={() => {}} disabled />
+```
+
+**Generic components:**
+```typescript
+interface ListProps<T> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+  keyExtractor: (item: T) => string | number;
+}
+
+export function List<T>({ items, renderItem, keyExtractor }: ListProps<T>) {
+  return (
+    <ul>
+      {items.map(item => (
+        <li key={keyExtractor(item)}>{renderItem(item)}</li>
+      ))}
+    </ul>
+  );
+}
+
+// Usage - type inferred from items
+<List
+  items={[{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]}
+  renderItem={user => user.name}
+  keyExtractor={user => user.id}
+/>
+```
+
+---
+
+#### Hooks with TypeScript
+
+**useState with type inference:**
+```typescript
+// Inferred from initial value
+const [count, setCount] = useState(0); // count: number
+
+// Explicit type (useful for complex state)
+const [user, setUser] = useState<User | null>(null);
+
+// Union state (discriminated union pattern)
+type State = 
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: string }
+  | { status: 'error'; error: string };
+
+const [state, setState] = useState<State>({ status: 'idle' });
+```
+
+**useCallback with proper typing:**
+```typescript
+interface User {
+  id: number;
+  name: string;
+}
+
+interface ListProps {
+  users: User[];
+  onSelect: (user: User) => void; // Callback type
+}
+
+export function UserList({ users, onSelect }: ListProps) {
+  // Callback is properly typed
+  const handleClick = useCallback((user: User) => {
+    onSelect(user);
+  }, [onSelect]);
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id} onClick={() => handleClick(user)}>
+          {user.name}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**useEffect with proper dependencies:**
+```typescript
+// Good: Dependencies include all used values
+useEffect(() => {
+  fetch(`/api/user/${userId}`)
+    .then(r => r.json())
+    .then(setUser);
+}, [userId]); // userId is included!
+
+// Better: Use useFetch or React Query instead
+const { data: user } = useQuery(['user', userId], () =>
+  fetch(`/api/user/${userId}`).then(r => r.json())
+);
+```
+
+**useRef with proper typing:**
+```typescript
+// Ref to DOM element
+const inputRef = useRef<HTMLInputElement>(null);
+
+const focus = () => {
+  inputRef.current?.focus(); // Optional chaining, safe
+};
+
+return <input ref={inputRef} />;
+
+// Ref to mutable value (not DOM)
+const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+const startTimer = () => {
+  timerRef.current = setTimeout(() => {
+    // ...
+  }, 1000);
+};
+
+const clearTimer = () => {
+  if (timerRef.current) {
+    clearTimeout(timerRef.current);
+  }
 };
 ```
 
-**Hooks:**
+**useReducer with discriminated unions:**
 ```typescript
-const [count, setCount] = useState<number>(0);
+type Action =
+  | { type: 'INCREMENT'; payload: number }
+  | { type: 'DECREMENT'; payload: number }
+  | { type: 'RESET' };
 
-useEffect(() => {
-  // ...
-}, [count]);
+interface State {
+  count: number;
+}
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'INCREMENT':
+      return { count: state.count + action.payload };
+    case 'DECREMENT':
+      return { count: state.count - action.payload };
+    case 'RESET':
+      return { count: 0 };
+  }
+}
+
+const [state, dispatch] = useReducer(reducer, { count: 0 });
+
+// Type-safe dispatch
+dispatch({ type: 'INCREMENT', payload: 5 }); // OK
+// dispatch({ type: 'INCREMENT', payload: 'five' }); // Error!
 ```
 
-**Event handlers:**
+**Custom hooks with TypeScript:**
 ```typescript
+interface UseFetchResult<T> {
+  data: T | null;
+  loading: boolean;
+  error: Error | null;
+}
+
+function useFetch<T>(url: string): UseFetchResult<T> {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    fetch(url)
+      .then(r => r.json())
+      .then(setData)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// Usage - type inferred
+const { data: user } = useFetch<User>('/api/user');
+```
+
+---
+
+#### Event Handlers
+
+**Common event types:**
+```typescript
+// Click event
 const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  e.preventDefault();
   console.log(e.currentTarget);
 };
+
+// Change event
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.currentTarget.value;
+};
+
+// Form event
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  const formData = new FormData(e.currentTarget);
+};
+
+// Generic event handler type
+type EventHandler<T extends HTMLElement> = React.MouseEventHandler<T>;
+const buttonHandler: EventHandler<HTMLButtonElement> = (e) => {};
 ```
 
-**Key takeaway:** Props interface. Typed hooks. Event types.
+---
+
+#### Context with TypeScript
+
+**Type-safe context:**
+```typescript
+interface Theme {
+  color: string;
+  fontSize: number;
+}
+
+// Create context with default undefined
+const ThemeContext = React.createContext<Theme | undefined>(undefined);
+
+// Provider component
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  theme: Theme;
+}
+
+export function ThemeProvider({ children, theme }: ThemeProviderProps) {
+  return (
+    <ThemeContext.Provider value={theme}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+// Custom hook to use context safely
+export function useTheme(): Theme {
+  const theme = React.useContext(ThemeContext);
+  if (!theme) {
+    throw new Error('useTheme must be used within ThemeProvider');
+  }
+  return theme;
+}
+
+// Usage
+function MyComponent() {
+  const theme = useTheme(); // Guaranteed to be Theme, never undefined
+}
+```
+
+---
+
+#### Server Components with TypeScript (React 19)
+
+```typescript
+// Server Component (default in Next.js 13+)
+interface PostProps {
+  id: string;
+}
+
+export default async function Post({ id }: PostProps) {
+  const post = await db.posts.findById(id); // Database access safe here
+  return <article>{post.content}</article>;
+}
+
+// Client Component with Server Action
+'use client'
+
+interface DeleteButtonProps {
+  postId: string;
+  onDelete: (id: string) => Promise<void>;
+}
+
+export function DeleteButton({ postId, onDelete }: DeleteButtonProps) {
+  const handleDelete = async () => {
+    await onDelete(postId);
+  };
+  return <button onClick={handleDelete}>Delete</button>;
+}
+
+// Server Action
+'use server'
+
+export async function deletePost(id: string): Promise<void> {
+  await db.posts.delete(id);
+  revalidatePath('/posts');
+}
+```
+
+---
+
+#### Component Prop Patterns
+
+**Discriminated component variant:**
+```typescript
+type ButtonVariant = 'primary' | 'secondary' | 'danger';
+type ButtonSize = 'sm' | 'md' | 'lg';
+
+interface BaseButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}
+
+type ButtonProps = BaseButtonProps & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+};
+
+export function Button({ variant = 'primary', size = 'md', ...props }: ButtonProps) {
+  return (
+    <button className={`btn btn-${variant} btn-${size}`} {...props} />
+  );
+}
+```
+
+**Polymorphic component (render as different element):**
+```typescript
+type PolymorphicProps<T extends React.ElementType> = {
+  as?: T;
+  children: React.ReactNode;
+} & React.ComponentPropsWithoutRef<T>;
+
+export function Box<T extends React.ElementType = 'div'>({
+  as: Component = 'div',
+  ...props
+}: PolymorphicProps<T>) {
+  return <Component {...props} />;
+}
+
+// Usage
+<Box as="section" className="container">Content</Box>
+<Box as="article">Article content</Box>
+```
+
+**Children prop typing:**
+```typescript
+// Accept any children
+interface WrapperProps {
+  children: React.ReactNode;
+}
+
+// Only accept specific components
+interface TabsProps {
+  children: React.ReactElement<TabProps>[];
+}
+
+// Accept render function
+interface RenderProps<T> {
+  children: (value: T) => React.ReactNode;
+}
+
+export function DataRenderer<T>({ children }: RenderProps<T>) {
+  const data = fetchData<T>();
+  return <>{children(data)}</>;
+}
+```
+
+**Key takeaway:** Props interface. Proper hook typing. Context with custom hooks. Discriminated unions for variants.
 
 ---
 
@@ -1111,16 +1798,443 @@ app.listen(3000);
 
 ---
 
-## Interview Tips
+## Production Patterns & Pitfalls
 
-1. **Explain benefits:** "TypeScript catches errors at compile time, improving code quality and reducing runtime bugs."
-2. **Discuss strictness:** "Enable strict mode for maximum type safety. Avoid `any`."
-3. **Real examples:** "Used generics to create reusable data fetching hooks in React."
-4. **Know when to use:** "Generics for reusable code, interfaces for object shapes, type aliases for unions."
-5. **Tooling:** "TypeScript provides excellent IDE support with autocomplete and refactoring."
+### Type-Safe API Calls
 
-**Key concepts:** Static typing, interfaces, generics, utility types, strict mode
+**Type-safe fetch wrapper:**
+```typescript
+interface ApiResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: string;
+}
+
+async function api<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const response = await fetch(endpoint, options);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  const json: ApiResponse<T> = await response.json();
+  if (json.status === 'error') {
+    throw new Error(json.error);
+  }
+  return json.data!; // Guaranteed due to discriminated union
+}
+
+// Usage
+const user = await api<User>('/api/user');
+```
+
+**Type-safe form handling:**
+```typescript
+interface LoginForm {
+  email: string;
+  password: string;
+}
+
+export function LoginForm() {
+  const [errors, setErrors] = useState<Partial<Record<keyof LoginForm, string>>>({});
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    
+    // Field-level validation
+    const newErrors: typeof errors = {};
+    if (!email.includes('@')) newErrors.email = 'Invalid email';
+    if (password.length < 8) newErrors.password = 'Too short';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    // Submit
+    const result = await api<{ token: string }>('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" type="email" />
+      {errors.email && <p>{errors.email}</p>}
+      
+      <input name="password" type="password" />
+      {errors.password && <p>{errors.password}</p>}
+      
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
 
 ---
 
-**Updated:** 2026-06-28 | **Level:** Intermediate-Advanced | **Format:** Interview-ready definitions
+### Common TypeScript + React Pitfalls
+
+**1. Incorrect useState typing:**
+```typescript
+// ❌ Wrong: Initial value is undefined, type is number | undefined
+const [count, setCount] = useState(0 || undefined);
+
+// ✅ Correct: Type is number
+const [count, setCount] = useState<number>(0);
+
+// ❌ Wrong: Union without discriminator
+const [data, setData] = useState<string | null>(null);
+// Later: if (data) { /* is it string or null? */ }
+
+// ✅ Correct: Discriminated state
+type DataState = 
+  | { status: 'idle'; data: null }
+  | { status: 'loading'; data: null }
+  | { status: 'success'; data: string }
+  | { status: 'error'; error: string };
+```
+
+**2. Missing dependency types in useEffect:**
+```typescript
+// ❌ Wrong: userId might be undefined
+const [userId, setUserId] = useState<number>();
+useEffect(() => {
+  if (!userId) return;
+  fetch(`/api/user/${userId}`); // userId might still be undefined to TypeScript
+}, [userId]);
+
+// ✅ Correct: Type guard in effect
+const [userId, setUserId] = useState<number | null>(null);
+useEffect(() => {
+  if (userId === null) return; // Now TypeScript knows userId is number
+  fetch(`/api/user/${userId}`);
+}, [userId]);
+```
+
+**3. Event handler typing errors:**
+```typescript
+// ❌ Wrong: Any type, loses type safety
+const handleChange = (e: any) => {
+  const value = e.target.value;
+};
+
+// ✓ Correct: Specific event type
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.currentTarget.value; // Type is string
+};
+
+// ❌ Wrong: e.target might be any element
+const handleChange = (e: React.ChangeEvent<HTMLElement>) => {
+  // e.currentTarget.value // Error: HTMLElement doesn't have value
+};
+```
+
+**4. Context consumption without provider check:**
+```typescript
+// ❌ Wrong: Context could be undefined
+const ThemeContext = React.createContext<Theme | undefined>(undefined);
+
+function useTheme() {
+  const theme = useContext(ThemeContext); // theme: Theme | undefined
+  return theme; // Caller must check for undefined
+}
+
+// ✅ Correct: Guarantee non-null
+function useTheme(): Theme {
+  const theme = useContext(ThemeContext);
+  if (!theme) {
+    throw new Error('useTheme must be inside ThemeProvider');
+  }
+  return theme;
+}
+```
+
+**5. Generic component type inference failure:**
+```typescript
+// ❌ Wrong: Type not inferred from initial data
+function Table<T>({ data }: { data: T[] }) {
+  // T is unknown, can't access properties
+}
+
+const table = <Table data={[{ name: 'Alice' }]} />;
+// Type parameter not inferred
+
+// ✅ Correct: Help type inference
+function Table<T extends Record<string, any>>({ data }: { data: T[] }) {
+  // T extends Record ensures properties exist
+}
+
+// Or explicit:
+<Table<User> data={users} />
+```
+
+**6. Assertion abuse instead of type narrowing:**
+```typescript
+// ❌ Wrong: Using ! everywhere
+const value = (response.data as SomeType)!.property!.field!;
+
+// ✓ Better: Type guards
+function isSomeType(value: unknown): value is SomeType {
+  return value !== null && typeof value === 'object' && 'property' in value;
+}
+
+if (isSomeType(response.data)) {
+  const value = response.data.property.field; // No ! needed
+}
+```
+
+**7. Over-typing simple values:**
+```typescript
+// ❌ Wrong: Unnecessary explicit type
+const user: User = { name: 'Alice', age: 30 };
+
+// ✓ Better: Let inference work
+const user = { name: 'Alice', age: 30 } as const; // If you need literal types
+
+// ✓ Or explicit only when needed
+const users: User[] = []; // Array needs type, elements inferred from additions
+```
+
+---
+
+### Type-Safe Patterns
+
+**Exhaustive switch statements:**
+```typescript
+type Status = 'pending' | 'success' | 'error';
+
+function handleStatus(status: Status): string {
+  switch (status) {
+    case 'pending':
+      return 'Loading...';
+    case 'success':
+      return 'Done!';
+    case 'error':
+      return 'Failed!';
+    // If you add new Status value but forget case here: TypeScript error!
+  }
+}
+
+// Add a case for impossible to reach to catch errors
+function handleStatus2(status: Status): string {
+  switch (status) {
+    case 'pending':
+      return 'Loading...';
+    case 'success':
+      return 'Done!';
+    // Missing case 'error'
+    default:
+      const _exhaustive: never = status; // Type error: 'error' not handled!
+      return _exhaustive;
+  }
+}
+```
+
+**Object key iteration without errors:**
+```typescript
+// ❌ Wrong: Key might not exist
+const user = { name: 'Alice', age: 30 };
+const key = 'unknownKey';
+console.log(user[key]); // Type error (good!)
+
+// ✓ Correct: Use keyof
+function getProperty<T extends Record<string, any>, K extends keyof T>(
+  obj: T,
+  key: K
+): T[K] {
+  return obj[key];
+}
+
+getProperty(user, 'name'); // OK
+// getProperty(user, 'unknownKey'); // Type error!
+```
+
+**Array.map type preservation:**
+```typescript
+const users = [{ id: 1, name: 'Alice' }];
+
+// ❌ Wrong: Type lost
+const ids = users.map(u => u.id); // Type: any[]
+
+// ✓ Correct: Return type explicit
+const ids = users.map<number>(u => u.id); // Type: number[]
+
+// Or type the array
+const ids: number[] = users.map(u => u.id);
+```
+
+---
+
+### Best Practices Summary
+
+**1. Enable strict mode (always):**
+```json
+{
+  "compilerOptions": {
+    "strict": true
+  }
+}
+```
+
+**2. Avoid `any` - use `unknown` instead:**
+```typescript
+// ❌ Bad
+function process(data: any) { }
+
+// ✓ Good
+function process(data: unknown) {
+  if (typeof data === 'string') {
+    // use data as string
+  }
+}
+```
+
+**3. Use discriminated unions for complex state:**
+```typescript
+// ❌ Confusing
+type State = { data?: T; loading?: boolean; error?: string };
+
+// ✓ Clear
+type State = 
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: T }
+  | { status: 'error'; error: string };
+```
+
+**4. Type your imports:**
+```typescript
+// ❌ Ambiguous
+const User = require('./user');
+
+// ✓ Clear
+import type { User } from './user'; // Type-only import
+import { getUser } from './user'; // Runtime import
+```
+
+**5. Use `satisfies` for validation without widening:**
+```typescript
+// ✅ Validates AND preserves literal types
+const config = {
+  mode: 'production',
+  timeout: 5000
+} satisfies AppConfig;
+// config.mode: 'production' (not string)
+```
+
+**Key takeaway:** Strict mode, discriminated unions, type guards, avoid assertions.
+
+---
+
+## Interview Tips (Expanded)
+
+### How to Answer TypeScript Questions
+
+**The formula:**
+1. **Direct answer** (1 sentence)
+2. **Why it matters** (production benefit)
+3. **When to use** (tradeoffs)
+4. **Example** (code)
+5. **Production wisdom** (10+ years insight)
+
+**Example (bad vs good):**
+
+**Bad:** "Generics let you write reusable code. You use `<T>` for type parameters."
+- No depth, no context
+
+**Good:** "Generics are functions that work with multiple types. In React, I use them for custom hooks that fetch different data types.
+
+Why it matters? Type safety across reuse. A single `useFetch<T>` hook handles `User`, `Post`, `Comment` without duplicating code.
+
+Real pattern: I use generics with constraints (`extends keyof T`) to ensure type safety when accessing object properties. Prevents 'undefined property' errors at compile time.
+
+Common gotcha: Type inference fails with complex scenarios. Solution: explicitly pass type parameter `useFetch<User>()` when inference doesn't work.
+
+Production lesson: Over-generalizing with generics creates complex types that hurt readability. Balance reuse vs clarity."
+
+---
+
+### Interview Questions You'll Get
+
+**"What's the difference between `type` and `interface`?"**
+- Interface: objects, extendable, declaration merging
+- Type: unions, primitives, computed properties, literals
+- Use interface for object shapes, type for unions
+
+**"What's a discriminated union? Why is it useful?"**
+- Union where each variant has literal property to distinguish
+- Instead of optional fields (partial State), force complete variant
+- TypeScript forces exhaustive handling → fewer bugs
+- Show React form state example
+
+**"How do you type a React component prop that extends HTML button?"**
+- Use `React.ButtonHTMLAttributes<HTMLButtonElement>`
+- Spread `...rest` for native props
+- Combine with custom props using intersection
+
+**"What's `satisfies` operator and why would you use it?"**
+- Validates type without widening
+- Preserves literal types vs losing to string
+- Example: config defaults without losing specificity
+
+**"How do you handle unknown API response types?"**
+- Use type guards / type predicates
+- Discriminated unions for success/error
+- Never cast with `as` without narrowing
+- Custom type predicate better than `as`
+
+**"What's a discriminated union? Show a React example."**
+- Show form submission state (idle | loading | success | error)
+- Explain exhaustive type checking in switch
+- Explain TypeScript forces handling all cases
+
+---
+
+### Red Flags Interviewers Watch For
+
+**What NOT to say:**
+1. "I just use `any` when stuck" → No type safety
+2. "Generics are too complicated" → Avoidance mindset
+3. "I never use type guards" → Missing type safety opportunities
+4. "Strict mode breaks my code" → Avoiding problems, not solving
+5. "I don't worry about TypeScript" → In 2026, expected
+6. "Interfaces and types are the same" → Misunderstanding
+7. "Type assertions are fine everywhere" → Defeating purpose of TypeScript
+8. "React.FC is the standard" → Outdated practice
+
+**What shows expertise:**
+- "TypeScript caught a bug before it reached production"
+- "I used discriminated unions to model state machine"
+- "Strict mode initially broke things, but revealed real bugs"
+- "I created a type-safe API wrapper"
+- "Type inference failed, so I explicitly passed generic type"
+- "I use type predicates instead of assertions"
+
+---
+
+### TypeScript in Production
+
+**Common production issues:**
+1. **Over-typing:** Every variable has explicit type = verbose, unreadable
+2. **Under-typing:** Avoid `any` like plague. Use `unknown` + type guard
+3. **Generic abuse:** Simple code doesn't need generics
+4. **Assertion overuse:** Sign of bad type design
+5. **Strict mode avoidance:** Lazy, leads to bugs
+
+**Real wisdom:**
+- TypeScript is best when it feels invisible (inference does heavy lifting)
+- If you're fighting the type system constantly, design is wrong
+- Discriminated unions > optional fields (force completeness)
+- Type guards > assertions (safer, intentional)
+- Custom hooks > utility types (reusable, clear)
+
+---
+
+**Updated:** 2026-08-22 | **Level:** Intermediate-Advanced | **Format:** Production-ready, Interview-ready

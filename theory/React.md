@@ -1637,6 +1637,805 @@ const Input = forwardRef((props, ref) => (
 
 ---
 
+## React 19 Features (2024-2025)
+
+### The Shift: Client-Server Boundary
+
+React 19 fundamentally changes how you think about React. It's not just "add more hooks"—it's about collapsing the client-server boundary.
+
+**Pre-React 19:** You fetch on client, manage state on client, send actions to server
+**React 19:** You write server code that looks like client code using Server Actions and `use()`
+
+This is as big as Hooks were.
+
+---
+
+### use() Hook
+
+**What it does:** Read promises and context directly in components. No wrapper needed.
+
+**Why it matters:** Simplifies async rendering and context consumption.
+
+**Before React 19:**
+```javascript
+// Option 1: Use useEffect (old pattern)
+const [data, setData] = useState(null);
+useEffect(() => {
+  fetchData().then(setData);
+}, []);
+
+// Option 2: Suspense (new pattern, but clunky)
+const data = fetchDataSuspense(); // Must throw promise
+```
+
+**With React 19:**
+```javascript
+// Directly read promise in component
+function MyComponent({ dataPromise }) {
+  const data = use(dataPromise);
+  return <div>{data}</div>;
+}
+
+// Parent passes promise (doesn't need to await)
+<MyComponent dataPromise={fetchData()} />
+// React waits for promise, renders when ready
+```
+
+**With context:**
+```javascript
+// Can call useContext conditionally now (only in React 19)
+function Component({ optionalContext }) {
+  // Works! Context can be optional
+  const value = optionalContext ? use(optionalContext) : null;
+  return <div>{value}</div>;
+}
+```
+
+**Key insight:** `use()` enables conditional async/context reading. Before you had to move context/async outside conditional logic.
+
+**When to use:**
+- Reading promise from props (Server Component passed you promise)
+- Conditional context reading
+- Simplifying Suspense patterns
+
+**Production gotcha:** `use()` must be in try-catch or Suspense boundary. Promise rejection isn't caught automatically.
+
+**Key takeaway:** `use()` simplifies promise and context reading. Enables conditional async.
+
+---
+
+### Server Actions
+
+**What it is:** Functions that run on server. You call them from client. React handles the connection.
+
+**Why it matters:** Eliminates API route boilerplate. Type-safe server calls. Automatic form revalidation.
+
+**How it works:**
+```javascript
+// server.js (Server Component or separate server file)
+'use server'
+
+export async function updateUser(formData) {
+  const name = formData.get('name');
+  // Run on server (database access, secrets safe)
+  const user = await db.users.update({ name });
+  revalidatePath('/users'); // Revalidate cache automatically
+  return user;
+}
+
+// client.js (Client Component)
+import { updateUser } from './server';
+
+export function UserForm() {
+  return (
+    <form action={updateUser}>
+      <input name="name" />
+      <button type="submit">Update</button>
+    </form>
+  );
+}
+```
+
+**Key points:**
+- `'use server'` directive marks function as server-only
+- Can be called from Client Components (React handles RPC)
+- Automatic serialization (no JSON.stringify needed)
+- Type-safe (TypeScript infers types across client-server)
+- Automatically revalidates related data after mutation
+
+**Compare to old way:**
+```javascript
+// Old: Manual API route + fetch
+// Step 1: Create API route
+export async function PUT(req) {
+  const data = await req.json();
+  await db.update(data);
+  return Response.json({ success: true });
+}
+
+// Step 2: Fetch from client
+const handleSubmit = async (e) => {
+  const data = new FormData(e.target);
+  const response = await fetch('/api/update', {
+    method: 'PUT',
+    body: JSON.stringify(Object.fromEntries(data))
+  });
+  // Step 3: Manually revalidate
+  revalidate();
+};
+
+// Server Actions: All automatic
+```
+
+**When to use:**
+- Form submissions (mutations)
+- Any client → server communication
+- Replacing API routes in Next.js
+
+**When NOT to use:**
+- Read-only queries from client (use `use()` + Server Components instead)
+- Streaming large responses (server actions assume small responses)
+- Real-time subscriptions (different pattern)
+
+**Production reality:** This is the big change. Most data fetching should move to Server Components + Server Actions. Client-side fetch becomes the exception, not the rule.
+
+**Key takeaway:** Server Actions eliminate API boilerplate. Client code calls server functions directly. Automatic revalidation.
+
+---
+
+### useActionState
+
+**What it does:** Manages form submission state with Server Actions.
+
+**Why it matters:** Replaces manual `isPending` + `isError` + error state management.
+
+**Before React 19:**
+```javascript
+function Form() {
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+    try {
+      await updateUser(formData);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsPending(false);
+    }
+  };
+  
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+**With React 19:**
+```javascript
+import { useActionState } from 'react';
+import { updateUser } from './server';
+
+function Form() {
+  const [state, formAction, isPending] = useActionState(updateUser, null);
+  
+  return (
+    <form action={formAction}>
+      <input name="name" />
+      <button disabled={isPending}>
+        {isPending ? 'Saving...' : 'Save'}
+      </button>
+      {state?.error && <p>{state.error}</p>}
+    </form>
+  );
+}
+```
+
+**How it works:**
+- First arg: Server Action to call
+- Second arg: Initial state
+- Returns: [state, formAction, isPending]
+- `formAction` → pass to `<form action={formAction}>`
+- `state` → server action return value
+- `isPending` → true while action running
+
+**Key difference from useTransition:**
+- `useTransition`: You control setState inside startTransition
+- `useActionState`: Form submission controls action automatically
+
+**Real example:**
+```javascript
+'use server'
+export async function createPost(prevState, formData) {
+  const title = formData.get('title');
+  
+  // Validation
+  if (!title) {
+    return { error: 'Title required' };
+  }
+  
+  try {
+    const post = await db.posts.create({ title });
+    // Success response
+    return { success: true, post };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// Client
+function NewPost() {
+  const [state, formAction, isPending] = useActionState(createPost, null);
+  
+  return (
+    <form action={formAction}>
+      <input name="title" required />
+      <button disabled={isPending}>
+        {isPending ? 'Creating...' : 'Create Post'}
+      </button>
+      {state?.error && <p style={{ color: 'red' }}>{state.error}</p>}
+      {state?.success && <p>Post created!</p>}
+    </form>
+  );
+}
+```
+
+**When to use:**
+- Form submissions with Server Actions
+- Any mutation where you need pending/error state
+- Alternative to useTransition for form-specific logic
+
+**Key takeaway:** useActionState handles form submission state automatically. Pass Server Action to `action` prop.
+
+---
+
+### useOptimistic
+
+**What it does:** Show optimistic UI update while server action runs.
+
+**Why it matters:** User sees instant feedback. Server catch-up happens in background.
+
+**The pattern:**
+```javascript
+// Server Action
+'use server'
+export async function addTodo(prevState, formData) {
+  const todo = { id: Date.now(), text: formData.get('text') };
+  await db.todos.insert(todo);
+  // Return updated list
+  return { todos: [...prevState.todos, todo] };
+}
+
+// Client
+function TodoList({ initialTodos }) {
+  const [state, formAction] = useActionState(addTodo, { todos: initialTodos });
+  
+  // Optimistic update: show new todo immediately
+  const [optimisticTodos, addOptimisticTodo] = useOptimistic(
+    state.todos,
+    (todos, newTodo) => [...todos, newTodo]
+  );
+  
+  const handleSubmit = (e) => {
+    const formData = new FormData(e.currentTarget);
+    const newTodo = { 
+      id: Math.random(), 
+      text: formData.get('text'),
+      pending: true // Mark as optimistic
+    };
+    
+    addOptimisticTodo(newTodo); // Show immediately
+    formAction(formData); // Send to server
+  };
+  
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <input name="text" />
+        <button>Add</button>
+      </form>
+      <ul>
+        {optimisticTodos.map(todo => (
+          <li key={todo.id} style={{ opacity: todo.pending ? 0.5 : 1 }}>
+            {todo.text}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+**How it works:**
+1. User submits form
+2. `addOptimisticTodo()` updates state immediately
+3. UI shows new todo (optimistic)
+4. Server action runs in background
+5. When server responds, real state updates
+6. Optimistic state replaced with server response
+
+**Why this matters:**
+- User sees instant feedback (feels fast)
+- Network latency invisible to user
+- If server fails, can rollback to previous state
+- No janky "loading" states
+
+**Real-world example:**
+```javascript
+// Adding reaction to post (like/favorite)
+'use server'
+export async function addReaction(postId, emoji) {
+  await db.reactions.insert({ postId, emoji });
+  revalidatePath(`/posts/${postId}`);
+}
+
+// Client
+function Post({ post, reactions }) {
+  const [optimisticReactions, addOptimistic] = useOptimistic(reactions);
+  
+  const handleReaction = (emoji) => {
+    addOptimistic([...optimisticReactions, emoji]); // Show immediately
+    addReaction(post.id, emoji); // Send to server
+  };
+  
+  return (
+    <div>
+      <p>{post.text}</p>
+      <div>
+        {optimisticReactions.map(emoji => <span key={emoji}>{emoji}</span>)}
+      </div>
+      <button onClick={() => handleReaction('❤️')}>Like</button>
+    </div>
+  );
+}
+```
+
+**Key insight:** Optimistic updates make apps feel responsive even with network latency.
+
+**When to use:**
+- Like/favorite buttons
+- Adding items to list
+- Any mutation where user can see result immediately
+- Comments, reactions, small state changes
+
+**When NOT to use:**
+- Large data transformations (too complex to predict)
+- Operations that might fail (show optimistic, then handle error)
+- Complex business logic (server action response is source of truth)
+
+**Key takeaway:** useOptimistic shows instant UI feedback. Server updates in background. Makes apps feel fast.
+
+---
+
+### useFormStatus
+
+**What it does:** Access form submission status in child components (pending, data, method, action).
+
+**Why it matters:** Share form state without lifting it up.
+
+**How it works:**
+```javascript
+'use server'
+export async function submitForm(formData) {
+  await new Promise(r => setTimeout(r, 1000)); // Simulate delay
+  return { success: true };
+}
+
+// SubmitButton is inside <form>, gets status automatically
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  
+  return (
+    <button disabled={pending}>
+      {pending ? 'Saving...' : 'Submit'}
+    </button>
+  );
+}
+
+function MyForm() {
+  const [state, formAction] = useActionState(submitForm, null);
+  
+  return (
+    <form action={formAction}>
+      <input name="text" />
+      <SubmitButton /> {/* Gets status automatically */}
+    </form>
+  );
+}
+```
+
+**What you get from useFormStatus:**
+```javascript
+const {
+  pending,        // true while action running
+  data,          // FormData object (for preview)
+  method,        // 'POST' or 'GET' (rarely needed)
+  action         // The action function
+} = useFormStatus();
+```
+
+**Real example (showing optimistic input):**
+```javascript
+function SearchInput() {
+  const { pending, data } = useFormStatus();
+  
+  // Show pending value while searching
+  const searchValue = data?.get('q') ?? '';
+  
+  return (
+    <input
+      name="q"
+      placeholder="Search..."
+      defaultValue={searchValue}
+      disabled={pending}
+    />
+  );
+}
+
+function SearchForm({ results }) {
+  return (
+    <form action={search}>
+      <SearchInput />
+      <button type="submit" disabled={pending}>Search</button>
+      {results.length > 0 && <Results items={results} />}
+    </form>
+  );
+}
+```
+
+**When to use:**
+- Disable submit button during submission
+- Show loading state in child components
+- Display pending form data for preview
+- Any child component that needs form status
+
+**Key difference from useActionState:**
+- `useActionState` → for parent managing action
+- `useFormStatus` → for children reading status
+
+**Key takeaway:** useFormStatus shares form submission state with child components automatically.
+
+---
+
+### Directives: 'use client' and 'use server'
+
+**What they are:** Markers that tell React where code should run (client or server).
+
+**'use server' directive:**
+```javascript
+// myserver.js
+'use server'
+
+// Everything in this file runs on server
+export async function fetchSecrets() {
+  // Safe: Database password never sent to client
+  const password = process.env.DB_PASSWORD;
+  const data = await db.query(password);
+  return data;
+}
+
+// Can be imported by Client Components
+// When called: Client makes request to server
+```
+
+**'use client' directive:**
+```javascript
+// In Next.js App Router, Server Components are default
+// Mark specific components as Client Components (need hooks, events, browser APIs)
+
+'use client'
+
+import { useState } from 'react'; // Now available
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      {count}
+    </button>
+  );
+}
+```
+
+**The boundary:**
+```
+Server Component (default in Next.js App Router)
+  ├─ Can access database, secrets
+  ├─ Passes data to Client Component
+  └─ Client Component
+      ├─ Receives data as props
+      ├─ Uses hooks (useState, useEffect)
+      ├─ Has event handlers
+      └─ Cannot access secrets
+```
+
+**Key rules:**
+- Server Components can import Server Actions
+- Client Components can call Server Actions
+- Cannot pass non-serializable objects (functions, classes) from Server → Client
+- Can pass data (strings, numbers, arrays, objects)
+
+**Real example:**
+```javascript
+// app/posts/page.js (Server Component by default)
+import { PostList } from './post-list';
+import { deletePost } from './actions';
+
+export default async function PostsPage() {
+  const posts = await db.posts.findAll(); // Server code
+  
+  return (
+    <>
+      <h1>Posts</h1>
+      <PostList posts={posts} onDelete={deletePost} />
+      {/* deletePost is Server Action, safe to pass */}
+    </>
+  );
+}
+
+// app/posts/post-list.js
+'use client' // Needs event handlers
+
+import { useTransition } from 'react';
+
+export function PostList({ posts, onDelete }) {
+  const [pending, startTransition] = useTransition();
+  
+  return (
+    <ul>
+      {posts.map(post => (
+        <li key={post.id}>
+          {post.title}
+          <button
+            onClick={() => startTransition(() => onDelete(post.id))}
+            disabled={pending}
+          >
+            Delete
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**When to use 'use server':**
+- Any function that needs database/secret access
+- Mutations (create, update, delete)
+- Anything calling external APIs with credentials
+
+**When to use 'use client':**
+- Components with hooks (useState, useEffect)
+- Components with event handlers (onClick, onChange)
+- Components using browser APIs (localStorage, window)
+- Components that need interactivity
+
+**Common mistake:** Marking everything 'use client'. Default to Server Components. Only mark Client Components where needed.
+
+**Key takeaway:** 'use server' marks server functions. 'use client' marks client components. Default is server in Next.js App Router.
+
+---
+
+### Improved Form Handling
+
+**What's new:**
+1. Forms can have `action` prop (Server Action)
+2. `<input>` auto-clears after submission
+3. Form elements accessible via FormData API
+4. Progressive enhancement (works without JS)
+
+**How it works:**
+```javascript
+'use server'
+export async function addItem(formData) {
+  const name = formData.get('name');
+  const item = await db.items.create({ name });
+  revalidatePath('/items');
+  return item;
+}
+
+// Client
+export function AddItemForm() {
+  const [state, formAction, isPending] = useActionState(addItem, null);
+  
+  return (
+    <form action={formAction}>
+      <input
+        name="name"
+        type="text"
+        placeholder="Item name"
+        required
+      />
+      {/* Auto-clears after submission */}
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Adding...' : 'Add Item'}
+      </button>
+      {state?.error && <p>{state.error}</p>}
+    </form>
+  );
+}
+```
+
+**Key improvements:**
+- No need for `onSubmit` handler (action handles it)
+- No need to `e.preventDefault()` (automatic)
+- Form data passed to Server Action as FormData
+- Automatic CSRF protection (built-in)
+- Works without JavaScript (progressive enhancement)
+
+**Progressive enhancement:**
+```html
+<!-- Without JavaScript, form still works -->
+<form action="/api/add" method="POST">
+  <input name="item" required />
+  <button type="submit">Add</button>
+</form>
+
+<!-- With React 19, same form gets JS enhancement (instant feedback, optimistic updates) -->
+```
+
+**Key takeaway:** Forms can now target Server Actions directly. Automatic data handling, CSRF protection, progressive enhancement.
+
+---
+
+### React 19 Mental Model Shift
+
+**Old React model:**
+```
+Client State → Component Re-render → DOM Update
+     ↓
+  fetch(API) → Update State → Re-render
+
+Problems:
+- Manage loading/error/success states manually
+- Race conditions (old request returns after new)
+- Cache invalidation manual
+- API routes boilerplate
+```
+
+**React 19 model:**
+```
+Server Component renders data
+     ↓
+Server Action mutates data + revalidates
+     ↓
+Client Components call Server Actions
+     ↓
+useOptimistic shows instant feedback
+     ↓
+Server updates received, UI syncs
+
+Benefits:
+- Automatic revalidation
+- Type-safe client-server boundary
+- Zero API boilerplate
+- Optimistic updates built-in
+```
+
+---
+
+### Production Patterns with React 19
+
+**Pattern 1: Form with validation**
+```javascript
+'use server'
+export async function updateProfile(prevState, formData) {
+  const email = formData.get('email');
+  
+  // Validation on server
+  if (!email.includes('@')) {
+    return { error: 'Invalid email' };
+  }
+  
+  try {
+    await db.users.update({ email });
+    revalidatePath('/profile');
+    return { success: true };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+// Client
+'use client'
+export function ProfileForm({ currentEmail }) {
+  const [state, formAction, isPending] = useActionState(updateProfile, null);
+  
+  return (
+    <form action={formAction}>
+      <input name="email" defaultValue={currentEmail} required />
+      <button disabled={isPending}>
+        {isPending ? 'Saving...' : 'Save'}
+      </button>
+      {state?.error && <p style={{ color: 'red' }}>{state.error}</p>}
+      {state?.success && <p style={{ color: 'green' }}>Saved!</p>}
+    </form>
+  );
+}
+```
+
+**Pattern 2: Optimistic list updates**
+```javascript
+'use server'
+export async function addTodo(prevState, formData) {
+  const text = formData.get('text');
+  const todo = await db.todos.create({ text });
+  revalidatePath('/todos');
+  return { todos: [...prevState.todos, todo] };
+}
+
+'use client'
+export function TodoApp({ initialTodos }) {
+  const [state, formAction] = useActionState(addTodo, { todos: initialTodos });
+  const [optimisticTodos, addOptimistic] = useOptimistic(state.todos, 
+    (todos, newTodo) => [...todos, newTodo]
+  );
+  
+  return (
+    <form action={(formData) => {
+      addOptimistic({ id: Date.now(), text: formData.get('text') });
+      formAction(formData);
+    }}>
+      <input name="text" />
+      <button>Add</button>
+      <ul>
+        {optimisticTodos.map(todo => <li key={todo.id}>{todo.text}</li>)}
+      </ul>
+    </form>
+  );
+}
+```
+
+---
+
+### When to Use React 19 Features
+
+| Feature | Use When | Don't Use When |
+|---------|----------|----------------|
+| `use()` | Reading promises/context in components | Simple sync values |
+| `Server Actions` | Mutations, form submissions | Read-only queries |
+| `useActionState` | Form submissions with Server Actions | useTransition-style scenarios |
+| `useOptimistic` | Show instant feedback while server updates | Complex predictions |
+| `useFormStatus` | Child component needs form status | Parent component (use useActionState) |
+| `'use server'` | Database access, secrets, mutations | Client-side logic |
+| `'use client'` | Hooks, events, browser APIs | Pure display components |
+
+---
+
+### React 19 Gotchas
+
+1. **FormData serialization:** Objects/nested structures not serialized. Flatten or use JSON endpoint.
+
+2. **Optimistic updates must be reversible:** If server fails, optimistic update reverts. Plan for this.
+
+3. **Server Actions aren't RPC:** They're designed for forms/mutations. Large data payloads problematic.
+
+4. **Type safety not automatic:** TypeScript doesn't magically know server action return type. Be explicit.
+
+5. **Directives are file-level:** `'use client'` at top of file affects whole module (and imports).
+
+---
+
+### Production Reality with React 19
+
+**This is the biggest React shift since Hooks.**
+
+Before: "How do I fetch data?" → useEffect + fetch + state management nightmare
+
+Now: Server Components + Server Actions → data flows naturally, mutations automatic
+
+**Adoption timeline:**
+- Next.js 13+ (App Router): Full support
+- Remix: Full support
+- Plain React: Server Actions coming, not fully here yet (needs framework)
+
+**Truth:** If you're not using Next.js/Remix, React 19 features are incomplete. Most of value comes from framework integration.
+
+**Key takeaway:** React 19 collapses client-server boundary. Server Actions eliminate API boilerplate. This is the future of React development.
+
+---
+
 ## Real-World Patterns
 
 ### Data Fetching

@@ -4,11 +4,9 @@
 1. [Core Concepts](#core-concepts)
 2. [Type 1: Unsorted Array (Classic)](#type-1-unsorted-array-classic)
 3. [Type 2: Sorted Array](#type-2-sorted-array)
-4. [Type 3: Data Structure Design](#type-3-data-structure-design)
-5. [Type 4: Tree-Based](#type-4-tree-based)
-6. [Type 5: Variants & Extensions](#type-5-variants--extensions)
-7. [Production Patterns & Lessons](#production-patterns--lessons)
-8. [Interview Guide](#interview-guide)
+4. [Type 3: Variants & Extensions](#type-3-variants--extensions)
+5. [Production Patterns & Lessons](#production-patterns--lessons)
+6. [Interview Guide](#interview-guide)
 
 ---
 
@@ -239,256 +237,9 @@ function twoSumBinarySearch(numbers: number[], target: number): number[] {
 
 ---
 
-## TYPE 3: DATA STRUCTURE DESIGN
+## TYPE 3: VARIANTS & EXTENSIONS
 
-**Problem:** Design a class that supports:
-- `add(number)` - adds number to data structure
-- `find(value)` - returns true if two numbers sum to value
-
-**Key insight:** This is NOT the classic two-sum. It's asking: design for MULTIPLE queries.
-
-```
-TwoSum twoSum = new TwoSum();
-twoSum.add(1);
-twoSum.add(3);
-twoSum.add(5);
-twoSum.find(4);   // true (1 + 3 = 4)
-twoSum.find(9);   // true (4 + 5 = 9)  Wait, we added 1,3,5 not 4!
-twoSum.find(10);  // false
-```
-
-### Solution: Hash Map with Frequency
-
-```typescript
-class TwoSum {
-  private numFreq: Map<number, number> = new Map(); // number → count
-  
-  /**
-   * Add a number to the data structure.
-   * Time: O(1) - map insertion
-   * Space: O(1) amortized per add
-   */
-  add(number: number): void {
-    this.numFreq.set(number, (this.numFreq.get(number) ?? 0) + 1);
-  }
-  
-  /**
-   * Check if two numbers sum to target value.
-   * Time: O(n) - iterate through all unique numbers
-   * Space: O(1) - only using stored map
-   */
-  find(value: number): boolean {
-    for (const [num, count] of this.numFreq) {
-      const complement = value - num;
-      
-      // Case 1: complement equals current number (need 2+ copies)
-      if (complement === num) {
-        return count > 1; // Need at least 2 instances
-      }
-      
-      // Case 2: complement is different number (need 1+ copy each)
-      if (this.numFreq.has(complement)) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-```
-
-**Why frequency map matters:**
-
-```typescript
-// ❌ WRONG: Using Set (loses duplicate info)
-class TwoSumWrong {
-  private nums: Set<number> = new Set();
-  
-  add(number: number): void {
-    this.nums.add(number);
-  }
-  
-  find(value: number): boolean {
-    for (const num of this.nums) {
-      const complement = value - num;
-      if (complement === num && /* how do we know we have 2? */) {
-        // Set only stores one instance per value!
-        return true; // WRONG
-      }
-      if (this.nums.has(complement)) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
-// Test case that breaks Set version:
-const ts = new TwoSum();
-ts.add(2);
-ts.find(4); // 2 + 2 = 4, but Set only has one 2!
-// Set version: returns false ❌
-// Frequency version: returns true (count=1, need >1) ✓
-```
-
-**When to use different approaches:**
-
-```typescript
-// Scenario 1: Heavy adds, light finds
-// → Use sorted array (O(n) add with insertion, O(n) find with 2-ptr)
-// Benefit: finds are O(n) regardless of number of adds
-
-class TwoSumSorted {
-  private nums: number[] = [];
-  
-  add(number: number): void {
-    // Insert in sorted order (could use binary search)
-    this.nums.push(number);
-    this.nums.sort((a, b) => a - b);
-  }
-  
-  find(value: number): boolean {
-    let left = 0, right = this.nums.length - 1;
-    while (left < right) {
-      const sum = this.nums[left] + this.nums[right];
-      if (sum === value) return true;
-      if (sum < value) left++;
-      else right--;
-    }
-    return false;
-  }
-}
-
-// Scenario 2: Light adds, heavy finds
-// → Use frequency map (O(1) add, O(n) find)
-// Benefit: adds are instant, finds iterate existing numbers
-
-// Production decision:
-// - Most adds, occasional find? → Sorted array
-// - Frequent finds? → Frequency map (better cache locality too)
-// - Balanced? → Frequency map (simpler, O(1) add)
-```
-
-**Complexity comparison:**
-
-| Approach | Add | Find | Space | Notes |
-|----------|-----|------|-------|-------|
-| Frequency Map | O(1) | O(n) | O(n) | Simple, best for frequent finds |
-| Sorted Array | O(n) | O(n) | O(n) | Better for frequent adds |
-| Both* | O(1) + O(n log n) preprocess | O(n) | O(n) | Overkill unless massive dataset |
-
-*Maintain both frequency map (for add O(1)) and sorted array (built on demand for find)
-
----
-
-## TYPE 4: TREE-BASED
-
-**Problem:** Given root of Binary Search Tree and target k, return true if two elements in BST sum to k.
-
-```
-Tree:     5
-         / \
-        3   6
-       / \
-      2   4
-
-target = 9, return: true (5 + 4 = 9)
-```
-
-### Solution: DFS with Hash Set
-
-```typescript
-class TreeNode {
-  val: number;
-  left: TreeNode | null;
-  right: TreeNode | null;
-  constructor(val: number = 0, left: TreeNode | null = null, right: TreeNode | null = null) {
-    this.val = val;
-    this.left = left;
-    this.right = right;
-  }
-}
-
-function findTarget(root: TreeNode | null, k: number): boolean {
-  const seen = new Set<number>();
-  
-  function dfs(node: TreeNode | null): boolean {
-    if (!node) return false;
-    
-    const complement = k - node.val;
-    
-    // Check if complement already seen
-    if (seen.has(complement)) {
-      return true;
-    }
-    
-    // Add current value for future checks
-    seen.add(node.val);
-    
-    // Recurse (DFS)
-    return dfs(node.left) || dfs(node.right);
-  }
-  
-  return dfs(root);
-}
-```
-
-**Complexity:**
-- Time: O(n) - visit each node once
-- Space: O(n) for set + O(h) for recursion stack
-  - Best case: O(log n) for balanced tree (h = log n)
-  - Worst case: O(n) for skewed tree (h = n)
-
-**Why DFS over BFS:**
-
-```typescript
-// Both work (DFS shown above, BFS below), but DFS is simpler:
-
-// BFS version:
-function findTargetBFS(root: TreeNode | null, k: number): boolean {
-  const seen = new Set<number>();
-  const queue: (TreeNode | null)[] = [root];
-  
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (!node) continue;
-    
-    const complement = k - node.val;
-    if (seen.has(complement)) return true;
-    
-    seen.add(node.val);
-    queue.push(node.left, node.right);
-  }
-  return false;
-}
-
-// DFS is cleaner because:
-// 1. Early return via || operator
-// 2. No need to explicitly manage queue
-// 3. Same space complexity (need full set either way)
-```
-
-**Key insight - BST property NOT needed:**
-
-```typescript
-// This works on ANY tree, not just BST!
-// BST structure doesn't help here (unlike binary search problems)
-// We need to check ALL nodes anyway
-
-// So this solution works for:
-// - Binary Search Tree ✓
-// - Any Binary Tree ✓
-// - N-ary Tree (just add children iteration) ✓
-
-// If problem specifically says BST and you're asked to optimize:
-// → Use BST property for range checking
-// (Out of scope for this guide)
-```
-
----
-
-## TYPE 5: VARIANTS & EXTENSIONS
-
-### Variant 5a: Two Sum - All Pairs
+### Variant 3a: Two Sum - All Pairs
 
 **Problem:** Find ALL pairs (not indices) that sum to target. Return unique pairs only.
 
@@ -556,7 +307,7 @@ for (const num of nums) {
 // Just skip duplicates when you find a match
 ```
 
-### Variant 5b: Two Sum Less Than K
+### Variant 3b: Two Sum Less Than K
 
 **Problem:** Count pairs where sum < K.
 
@@ -625,7 +376,7 @@ left=1 (8), right=5 (34): sum=42 < 60 → count += (5-1) = 4 pairs
 Total count = 6 + 4 + ... = correct answer
 ```
 
-### Variant 5c: Closest Sum
+### Variant 3c: Closest Sum
 
 **Problem:** Find two numbers with sum closest to target. Return the difference.
 
@@ -921,13 +672,11 @@ function twoSum(nums: number[], target: number): number[] {
 
 | Variation | Algorithm | Time | Space | When to Use |
 |-----------|-----------|------|-------|------------|
-| Classic Two Sum | Hash Map | O(n) | O(n) | Unsorted array, single query |
+| Classic Two Sum (I) | Hash Map | O(n) | O(n) | Unsorted array, single query |
 | Two Sum II | Two Pointers | O(n) | O(1) | Sorted array (no extra space) |
-| Two Sum III | Frequency Map | Add: O(1), Find: O(n) | O(n) | Dynamic inserts, multiple queries |
-| Two Sum IV (Tree) | DFS + Hash Set | O(n) | O(n) | Tree traversal |
-| All Pairs | Sorted + 2-Ptr | O(n log n) | O(1) | Unique pairs, deduplication |
-| Count < K | Sorted + 2-Ptr | O(n log n) | O(1) | Counting pairs with condition |
-| Closest Sum | Sorted + 2-Ptr | O(n log n) | O(1) | Minimize/maximize sum |
+| All Pairs (3a) | Sorted + 2-Ptr | O(n log n) | O(1) | Unique pairs, deduplication |
+| Count < K (3b) | Sorted + 2-Ptr | O(n log n) | O(1) | Counting pairs with condition |
+| Closest Sum (3c) | Sorted + 2-Ptr | O(n log n) | O(1) | Minimize/maximize sum |
 
 ---
 

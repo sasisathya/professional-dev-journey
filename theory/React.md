@@ -1,47 +1,748 @@
 # React - Professional Interview Guide (2-Minute Explanations)
 
 ## Table of Contents
-1. [Core Concepts](#core-concepts)
-2. [Hooks & State Management](#hooks--state-management)
-3. [Component Patterns](#component-patterns)
-4. [Performance & Optimization](#performance--optimization)
-5. [Advanced Topics](#advanced-topics)
-6. [Real-World Patterns](#real-world-patterns)
+1. [React's Core Architecture](#reacts-core-architecture)
+2. [Core Concepts](#core-concepts)
+3. [Hooks & State Management](#hooks--state-management)
+4. [Component Patterns](#component-patterns)
+5. [Performance & Optimization](#performance--optimization)
+6. [Advanced Topics](#advanced-topics)
+7. [Real-World Patterns](#real-world-patterns)
+
+---
+
+## React's Core Architecture
+
+### The One-Sentence Definition (Understand This First)
+
+**React is a scheduler + renderer + tree-diffing system that repeatedly calculates the next UI tree from props/state/context, compares it with the previous tree, and commits only the required host-environment changes.**
+
+For React DOM, the host environment is the browser DOM. For React Native, it's native views. For other renderers, it's whatever target they're optimized for.
+
+---
+
+### The Complete React Lifecycle
+
+This is THE most important mental model. Everything in React flows through this pipeline:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          REACT LIFECYCLE PHASES                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              SOMETHING TRIGGERS
+                                    ↓
+                        (User input, setState, Props change,
+                         External API call, Timer, etc.)
+                                    ↓
+                   ┌─────────────────────────────────────┐
+                   │   SCHEDULER (Priority System)        │
+                   ├─────────────────────────────────────┤
+                   │ - Urgent: User input, animations     │
+                   │ - Normal: Regular updates            │
+                   │ - Low: Background work               │
+                   └─────────────────────────────────────┘
+                                    ↓
+                   ┌─────────────────────────────────────┐
+                   │    RENDER PHASE (Interruptible)     │
+                   ├─────────────────────────────────────┤
+                   │ - Call function components          │
+                   │ - Process hooks (useState, etc)      │
+                   │ - Generate new Fiber tree           │
+                   │ - Build/compare Fiber nodes         │
+                   └─────────────────────────────────────┘
+                                    ↓
+                   ┌─────────────────────────────────────┐
+                   │  RECONCILIATION (Diffing Algorithm) │
+                   ├─────────────────────────────────────┤
+                   │ - Compare old Fiber with new Fiber  │
+                   │ - Mark which nodes changed          │
+                   │ - Determine required mutations      │
+                   │ - Build effects queue               │
+                   └─────────────────────────────────────┘
+                                    ↓
+          ┌─────────────────────────────────────────────────┐
+          │     CAN INTERRUPT HERE (High Priority Work)     │
+          │  ← React yields to browser for user input →     │
+          │     Then resumes rendering remaining work       │
+          └─────────────────────────────────────────────────┘
+                                    ↓
+                   ┌─────────────────────────────────────┐
+                   │    COMMIT PHASE (Synchronous)       │
+                   ├─────────────────────────────────────┤
+                   │ - Apply all DOM mutations          │
+                   │ - Update refs (.current)            │
+                   │ - NOT interruptible                 │
+                   │ - Atomic: All or nothing            │
+                   └─────────────────────────────────────┘
+                                    ↓
+                            DOM UPDATED
+                                    ↓
+                   ┌─────────────────────────────────────┐
+                   │     LAYOUT EFFECTS (useLayoutEffect)│
+                   ├─────────────────────────────────────┤
+                   │ - Synchronous after DOM update      │
+                   │ - Before browser paint              │
+                   │ - For DOM measurements, adjustments │
+                   └─────────────────────────────────────┘
+                                    ↓
+                        BROWSER PAINTS PIXELS
+                        (Visual frame rendered)
+                                    ↓
+                   ┌─────────────────────────────────────┐
+                   │  PASSIVE EFFECTS (useEffect)        │
+                   ├─────────────────────────────────────┤
+                   │ - Asynchronous after paint          │
+                   │ - Doesn't block interaction         │
+                   │ - For subscriptions, API calls      │
+                   └─────────────────────────────────────┘
+                                    ↓
+                      APP FULLY INTERACTIVE
+                            (User can act again)
+```
+
+---
+
+### Key Architectural Concepts
+
+#### 1. **Fiber Architecture (The Scheduling Magic)**
+
+React 16+ uses Fibers instead of a call stack. Here's why it matters:
+
+**Before Fiber (React 15 and earlier):**
+```
+Render entire component tree recursively
+  → Synchronous (can't stop)
+  → If tree is large, blocks main thread
+  → Browser can't handle user input
+  → UI feels frozen
+```
+
+**With Fiber (React 16+):**
+```
+Break rendering work into small units (~5ms each)
+  → After each unit, yield to browser
+  → Browser handles user input, animations
+  → Then React resumes next unit
+  → User sees responsive UI even during large renders
+```
+
+**The Fiber data structure:**
+- Each component instance → 1 Fiber node
+- Fiber tree is linked list (parent, child, sibling pointers)
+- Can traverse it incrementally (unlike call stack)
+- Stores: component state, hooks, props, effects queue
+
+**Why this matters:** Concurrent React (React 18+) is built on Fibers. Without Fibers, prioritization and interruption would be impossible.
+
+---
+
+#### 2. **The Render Phase: Calculating the Next UI**
+
+When something triggers an update, React enters the Render phase:
+
+```
+Current State + Props
+        ↓
+   Execute Component Function
+        ↓
+   Call Hooks (useState returns current state)
+   (useEffect queues side effects, not runs them)
+        ↓
+   Return JSX → Convert to Fiber tree
+        ↓
+   Compare with Previous Fiber Tree
+        ↓
+   Mark Changed Nodes (using "workInProgress" fibers)
+        ↓
+   Generate Effects Queue
+        ↓
+   ✓ Render Phase Complete (can be interrupted)
+```
+
+**Critical insight:** During render phase, effects don't run yet. setState callbacks don't fire. It's pure computation.
+
+---
+
+#### 3. **The Commit Phase: Actually Mutating the DOM**
+
+Once render phase completes, commit phase begins:
+
+```
+Traverse Marked Fibers
+        ↓
+For each marked node:
+  - Create/update/delete DOM element
+  - Update refs
+  - Execute class lifecycle methods
+        ↓
+All DOM mutations committed atomically
+(Can't interrupt mid-commit)
+        ↓
+Browser DOM now reflects new state
+        ↓
+useLayoutEffect hooks run (synchronously)
+        ↓
+Browser paints
+        ↓
+useEffect hooks run (asynchronously)
+```
+
+**Why atomic:** If commit is interrupted mid-way, DOM would be in inconsistent state. So commit phase is never interrupted.
+
+---
+
+#### 4. **Reconciliation: How React Decides What Changed**
+
+The diffing algorithm is simpler than you think:
+
+```
+Comparing Old Fiber vs New Fiber
+
+IF element type changed (div → span)
+  → Throw away old tree
+  → Create completely new one
+  
+IF element type same (div → div)
+  → Keep DOM element
+  → Only update properties
+  
+FOR LISTS:
+  → Use 'key' prop to match items
+  → If no key: use array index (fragile)
+  → If key present: match by key (stable)
+  
+RESULT: Minimal DOM mutations needed
+```
+
+**Why this matters for lists:**
+
+```javascript
+// BAD: Using index as key
+items.map((item, index) => <div key={index}>{item}</div>)
+// If you reorder: indices stay 0,1,2 but items change
+// React thinks same items, wrong state attached
+
+// GOOD: Using stable ID
+items.map(item => <div key={item.id}>{item}</div>)
+// If you reorder: keys stay with their items
+// React correctly preserves state
+```
+
+---
+
+#### 5. **The Update Queue: Batching and Priority**
+
+When you call `setState`, it doesn't happen immediately:
+
+```
+setState called
+        ↓
+Update enqueued (added to Fiber's update queue)
+        ↓
+React checks if update is urgent
+  → High: User input, animations (interrupt-able)
+  → Normal: Regular updates
+  → Low: Background work
+        ↓
+IF NOT in batching context:
+  Schedule render immediately
+ELSE:
+  Batch with other updates
+  Render once for all updates
+        ↓
+Scheduler decides when to start render phase
+  (ASAP for urgent, deferred for low priority)
+```
+
+**In React 18+:** Batching is automatic in more contexts (promises, async functions, not just event handlers).
+
+---
+
+#### 6. **Hooks System: How State Survives Rerenders**
+
+Hooks are functions that use closure + fiber state storage:
+
+```
+First render:
+  const [count, setCount] = useState(0)
+  → Creates hook state in Fiber
+  → Initializes to 0
+  → Returns [0, setterFunction]
+
+Second render:
+  const [count, setCount] = useState(0)
+  → React ignores the "0" argument
+  → Returns stored value from Fiber [1, setterFunction]
+
+Why? React matches hooks by CALL ORDER, not by variable name:
+  First useState call → Hook #0 in Fiber
+  Second useState call → Hook #1 in Fiber
+  Third useEffect call → Hook #2 in Fiber
+
+This is why:
+  ✓ Call hooks at top level (same order every render)
+  ✗ Call hooks conditionally (breaks order)
+  ✗ Call hooks in loops (order changes per loop iteration)
+```
+
+---
+
+#### 7. **Why React Re-renders (The One Thing People Misunderstand)**
+
+A component re-renders when:
+
+```
+1. STATE changes (setState called)
+   → Component function called again with new state
+   
+2. PROPS change (parent passed different value)
+   → Component function called again with new props
+   
+3. PARENT re-renders
+   → ALL children re-render by default
+   → Even if their props didn't change
+   (Solution: React.memo to opt-out)
+   
+4. CONTEXT value changes
+   → All consumers re-render
+   (Solution: Split into multiple contexts)
+   
+5. forceUpdate() (class components only, rare)
+   → Forces re-render regardless
+```
+
+**The misconception:** "Re-render is expensive." Wrong. Re-render (calling component function) is cheap. DOM updates are expensive. React minimizes DOM updates, not re-renders.
+
+---
+
+#### 8. **The Memory Model: Why Closure Matters**
+
+Every render creates a new scope:
+
+```
+Render #1:
+  count = 0
+  props = { name: 'Alice' }
+  callbacks close over count=0, props='Alice'
+  
+User updates state → Re-render
+  
+Render #2:
+  count = 1 (new variable, new closure)
+  props = { name: 'Alice' }
+  Old callbacks still close over count=0
+  New callbacks close over count=1
+  
+If callback scheduled for later (useEffect, setTimeout):
+  It captures the value from its render
+  Later execution sees stale value
+  
+Solution: Dependencies array tells React when to recreate callback
+```
+
+This is why missing useEffect dependencies cause stale closures.
+
+---
+
+#### 9. **Concurrent Features: useTransition and useDeferredValue**
+
+Built on top of Fiber priority system:
+
+```
+Normal React (before Concurrent):
+  setState → Render everything → Commit → Done
+  User input blocked during render
+
+With useTransition:
+  startTransition(() => setState(largeUpdate))
+  → Mark this update as low-priority
+  
+  IF high-priority work arrives (user types):
+    → Pause low-priority render
+    → Handle user input immediately
+    → Resume low-priority render later
+  → User always feels responsive
+
+With useDeferredValue:
+  deferredValue = useDeferredValue(expensiveValue)
+  → If value changes
+  → Start rendering with old value (to show something)
+  → Render new value separately, low-priority
+  → Show new value when ready (or keep old if new arrives)
+  → User sees graceful degradation
+```
+
+---
+
+### Mental Models for Deep Understanding
+
+#### **React = Function of State**
+
+```
+UI = f(state)
+
+This is ALL React is. Everything else is optimization.
+
+Previously: App state → Update DOM imperatively
+React way:   App state → Recalculate UI function → React updates DOM
+
+Implication: Same state → Same UI (deterministic, testable, predictable)
+```
+
+---
+
+#### **Render and Commit are Separate**
+
+```
+Render phase = pure, repeatable, interruptible
+  → Calculate new UI (no side effects)
+  → Can run multiple times (same result)
+  → Can be paused/resumed
+  → Can be abandoned if higher-priority work arrives
+
+Commit phase = actual mutation, synchronous
+  → Apply DOM changes (effects now run)
+  → Update refs
+  → Side effects execute
+  → User sees result
+```
+
+---
+
+#### **Keys are Stability Points**
+
+```
+Without keys:
+  <div key={0}> Item 1 </div>
+  <div key={1}> Item 2 </div>
+  
+  Reorder items → keys change → React says "different items"
+  → Throws away state, creates new instances
+  
+With keys:
+  <div key="item-123"> Item </div>
+  
+  Move item around → key stays with item
+  → React says "same item, different position"
+  → State preserved, DOM element reused/moved
+```
+
+This is why keys must be stable IDs, never indices or random values.
+
+---
+
+### The State Pyramid
+
+```
+         Server Database
+                 ↑
+                 │
+         Server-Side Cache
+           (normalization,
+           deduplication)
+                 ↑
+                 │
+      API Response → Browser
+                 ↓
+                 │
+     Client-Side State Manager
+      (Zustand, Redux, Context)
+                 ↓
+                 │
+      Component Local State
+           (useState)
+                 ↓
+                 │
+            Derived Values
+      (computed, useMemo)
+                 ↓
+                 │
+           Rendered Output
+
+Best practice: Keep state as high in pyramid as it needs to be.
+Not: Always make everything in server or always in client.
+But: Put it where it logically belongs.
+```
+
+---
+
+### Common Architecture Mistakes
+
+1. **Putting server state in client state**
+   - Problem: Cache invalidation nightmare
+   - Solution: Use TanStack Query (or Remix/Next.js server data)
+
+2. **Making state too global**
+   - Problem: Every change re-renders whole app
+   - Solution: Split into multiple contexts or use Zustand
+
+3. **Not understanding render vs commit**
+   - Problem: Try to mutate DOM in render phase (breaks things)
+   - Solution: Mutations go in effects or commit phase
+
+4. **Confusing component re-render with DOM re-render**
+   - Problem: Think re-rendering function is expensive
+   - Solution: Understand: function call is cheap, DOM updates are expensive
+
+5. **Thinking VDOM comparison is "fast"**
+   - Problem: Expect VDOM to be faster than targeted DOM updates
+   - Solution: VDOM wins by reducing # of DOM changes, not by being fast
 
 ---
 
 ## Core Concepts
 
-### Virtual DOM (VDOM)
-**What it is:** In-memory JavaScript representation of your UI tree. Not actual DOM—just React's internal data structure.
+### Virtual DOM (VDOM) and Fiber Trees
 
-**Why it exists:** Direct DOM manipulation is expensive. React uses VDOM as a middle layer to calculate minimal DOM changes before committing them.
+**What it actually is:** React doesn't have a "Virtual DOM object" per se. It has **Fiber trees** (data structure representation of your component tree). The term "VDOM" is legacy—it's just React's internal representation.
 
-**How it works:** React renders → creates new VDOM tree → diffs against old VDOM → generates minimal DOM updates → commits in batch. This reduces expensive DOM operations.
+**The data flow:**
 
-**Modern reality (React 18+):** With Concurrent Rendering, work can be interrupted and resumed. Updates aren't always atomic. VDOM is still abstraction, but the commit phase is what matters most.
+```
+Component State/Props
+         ↓
+  Render Phase:
+  Call component function → Generate JSX
+         ↓
+  Convert JSX to Fiber Tree
+  (Tree of nodes: component type, props, hooks state, etc.)
+         ↓
+  Compare with Previous Fiber Tree (Reconciliation)
+         ↓
+  Mark which fibers changed → Effects queue
+         ↓
+  Commit Phase:
+  Traverse marked fibers → Apply DOM mutations
+         ↓
+  Browser DOM Updated
+```
 
-**Common misconception:** "VDOM is faster than direct DOM changes." Wrong. VDOM is about *reducing* DOM changes, not speed. In some cases, targeted DOM updates are faster. VDOM wins when you have many changes—it batches them efficiently.
+**Why Fiber (not VDOM):**
+- Old React: Call stack-based rendering (can't pause)
+- Modern React: Fiber trees are traversable, pausable structures
+- Enables: Concurrent rendering, priority-based scheduling, error boundaries
 
-**Production insight:** The benefit isn't the VDOM comparison—it's that React forces you to think in terms of state → UI. This consistency prevents bugs. The performance benefit is secondary.
+**Why the middle layer exists:**
+```
+Direct DOM manipulation is expensive:
+  - Accessing DOM triggers reflow/repaint
+  - CSS recalculation
+  - Layout recalculation
+  - Browser synchronously blocks JS
 
-**Key takeaway:** VDOM is React's abstraction that enables batching, diffing, and state-driven rendering. The real win is consistency and the ability to interrupt/resume work.
+React's approach:
+  1. Calculate next UI in JavaScript (cheap)
+  2. Batch all DOM changes together (one reflow/repaint)
+  3. Apply once (one paint)
+  
+Benefit: If you have 100 state changes, old approach:
+  setState → reflow → setState → reflow → ... (100 reflows)
+React: All updates batch → one reflow → one paint
+```
+
+**Common misconception:** "VDOM is faster than direct DOM." **Wrong.** 
+- Advantage: Reduces # of DOM operations (batching, minimal changes)
+- Disadvantage: Computing Fiber tree has overhead
+- Net result: Only faster if you have *many* updates per frame
+- If you carefully update exact DOM nodes, that could be faster
+- But then you lose: consistency, testability, predictability
+
+**The real win:** Not speed, but **consistency and predictability**.
+```
+State A → UI A (always)
+State B → UI B (always)
+
+This deterministic guarantee enables:
+  - Replayability (given same state, same UI)
+  - Testing (compare states, not DOM mutations)
+  - Time travel debugging
+  - Server-side rendering
+  - Concurrent rendering
+```
+
+**Modern reality (React 18+):**
+- Fiber trees support *interruptible rendering*
+- High-priority updates (user input) can pause low-priority renders
+- Same state + same props = same render result
+- But when you commit that result depends on priority
+- This is why useTransition/useDeferredValue work
+
+**Production insight:** The VDOM/Fiber overhead is negligible for most apps. Real bottleneck is usually:
+  1. Expensive components rendering too often (wrong dependency)
+  2. Large API response creating large trees
+  3. Unoptimized backend (slow API = slow page, not slow React)
+  4. Large JavaScript bundle size
+
+**Key takeaway:** VDOM (actually Fiber trees) is React's abstraction enabling consistent, batchable, interruptible rendering. The benefit is consistency and correctness, not raw speed.
 
 ---
 
 ### Reconciliation (Diffing Algorithm)
-**What it is:** Process of comparing old and new VDOM trees to find what changed.
+
+**What it is:** The algorithm that compares old and new Fiber trees to determine which DOM nodes need to change.
+
+**The reconciliation process:**
+
+```
+OLD FIBER TREE          NEW FIBER TREE
+    <App/>                  <App/>
+      |                       |
+   <Page>    vs            <Page>
+   /    \                  /    \
+<List> <Footer>         <List> <Footer>
+
+
+React walks both trees simultaneously:
+
+For each node:
+  1. Same element type?
+     YES → Update props, keep DOM element
+     NO  → Delete old, create new
+     
+  2. Element still exists?
+     YES → Recursively check children
+     NO  → Mark for deletion
+     
+  3. New element?
+     YES → Mark for insertion
+     
+RESULT: List of "effect" operations
+  - [UPDATE_PROPS, nodeA, { className: 'active' }]
+  - [DELETE_NODE, nodeB]
+  - [INSERT_NODE, nodeC]
+```
 
 **How React decides what changed:**
-- If element type changes (`<div>` to `<span>`): Throw away old tree, create new one
-- If element type stays same: Keep element, only update the properties (props/attributes)
-- For lists: Use `key` prop to identify which item is which
 
-**Why keys matter:** Without keys, React uses index. If you filter/reorder list, wrong state gets attached to wrong items. Always use stable IDs (database IDs), never array indices.
+```
+Heuristic-based approach (NOT comparing all permutations):
 
-**Example issue:** List has 3 items with `key={index}`. You delete first item. Now what was item 2 becomes item 1 (index changes). React thinks it's the same item but it's not—state goes wrong.
+Rule 1: Different element types = different trees
+  <div>       vs    <span>
+  ↓                  ↓
+  Delete old         Create new
+  completely        completely
+  All children gone  Old children unmounted
+  
+Rule 2: Same element type = same tree, update props
+  <div class="a">    vs    <div class="active">
+  ↓
+  Keep same DOM element
+  Update props: { className: 'active' }
+  Keys are stable within same element type
+  
+Rule 3: Lists need keys to match items
+  <li key="user-1"> Alice </li>   vs   <li key="user-2"> Bob </li>
+  ↓
+  Different keys = different items
+  Delete Alice node
+  Create Bob node
+  
+  <li key="user-1"> Alice </li>   vs   <li key="user-1"> Alice Smith </li>
+  ↓
+  Same key = same item
+  Keep DOM element
+  Update content
+```
 
-**Key takeaway:** Always use stable, unique keys (database IDs). Never use array indices.
+**The key matching algorithm (critical for lists):**
+
+```
+SCENARIO: Reorder a list
+
+OLD:
+  <li key="1"> Alice </li>
+  <li key="2"> Bob </li>
+  <li key="3"> Carol </li>
+
+NEW (reordered):
+  <li key="2"> Bob </li>
+  <li key="1"> Alice </li>
+  <li key="3"> Carol </li>
+
+React's matching:
+  
+  Position 0:
+    OLD: key="1"
+    NEW: key="2"
+    Different keys → not same item
+    
+  Position 1:
+    OLD: key="2"
+    NEW: key="1"
+    Different keys → not same item
+    
+  Position 2:
+    OLD: key="3"
+    NEW: key="3"
+    Same key → same item, just moved
+    
+  Result: Move Alice and Bob nodes in DOM
+          (reuse Carol node)
+```
+
+**What goes wrong WITHOUT keys (using index):**
+
+```
+SCENARIO: Delete first item from list
+
+WITH KEYS:
+  OLD: <li key="user-1">Alice</li>, <li key="user-2">Bob</li>
+  NEW: <li key="user-2">Bob</li>
+  
+  React: key="user-2" matches Bob item
+         Delete Alice node
+         Keep Bob node (same item, state preserved)
+         ✓ Correct
+
+WITHOUT KEYS (key={index}):
+  OLD: <li key="0">Alice</li>, <li key="1">Bob</li>
+  NEW: <li key="0">Bob</li>
+  
+  React: Both have key="0"
+         React thinks: "same item, just content changed"
+         Keeps first node
+         Updates content to "Bob"
+         BUT Bob's state (checked checkbox, focus, etc.) is still Alice's
+         ✗ Wrong state attached to wrong item
+```
+
+**Why this matters for component state:**
+
+```
+List of checkboxes:
+  <CheckBox key={i} /> ← Checked state lives in <CheckBox> component
+  
+If you reorder without stable keys:
+  Position 0 was alice=checked ✓
+  Reorder: alice moves to position 2
+  But key=0 still points to first item
+  React: "key=0 still exists, update props"
+  Render CheckBox at position 0 with alice's props
+  BUT CheckBox still has its old internal state (checked ✓)
+  Result: Wrong checkbox appears checked
+```
+
+**Performance impact:**
+
+```
+WITH keys:
+  Reorder 100 items
+  React reuses 100 DOM elements
+  Moves them in DOM (fast)
+  State preserved
+  
+WITHOUT keys:
+  Reorder 100 items
+  React thinks all are different
+  Destroys 100 DOM elements
+  Creates 100 new ones (slow)
+  State lost (reset to initial)
+  Inputs lose focus
+```
+
+**Key takeaway:** Use stable, unique IDs (database IDs). Never use array indices. Keys are how React matches "is this the same item or a different one?"
 
 ---
 
@@ -65,20 +766,228 @@
 
 ---
 
-### React Fiber Architecture
-**What it is:** Internal system that controls how React renders components.
+### React Fiber Architecture (The Scheduler)
 
-**The problem it solves:** Old React would render entire component tree without stopping. If you had a big tree, it would block the browser for too long, making app feel frozen/unresponsive to user input.
+**What it is:** The scheduling system that controls HOW and WHEN React renders components. It's not about WHAT to render, but about controlling the execution flow.
 
-**How Fiber fixes it:**
-- Breaks rendering work into small chunks (~5ms each)
-- After each chunk, yields control to browser
-- Browser can handle user input, animations, etc.
-- Then React resumes rendering next chunk
+**The problem it solves:**
 
-**Priority system:** React gives higher priority to important updates (user input, animations) and lower priority to background work (data fetching).
+```
+Old React (synchronous rendering):
+  setState → Render entire tree recursively → DOM update
+             ↑                                      ↑
+          Takes time                    Everything frozen while rendering
 
-**Key takeaway:** Fiber = splitting work into chunks so browser stays responsive. Users don't see frozen UI even with complex renders.
+Scenario: Large list (1000 items)
+  setState → Start rendering → Takes 50ms
+  User types during render → Input handler queued
+  Render finishes → Input handler fires (50ms delay)
+  User sees lag, janky experience
+
+Modern React (Fiber scheduling):
+  setState → Schedule work → Chunk rendering into 5ms pieces
+             ↑
+             Check every 5ms if user input arrived
+  If input: Pause rendering, handle input, resume rendering
+  User always responsive
+```
+
+**How Fiber breaks work into chunks:**
+
+```
+Work to do: Render large component tree
+  ├─ Render App component (1ms)
+  ├─ Render Page component (1ms)
+  ├─ Render List component (1ms)
+  ├─ Render Item 1 (0.5ms)
+  ├─ Render Item 2 (0.5ms)
+  ├─ Render Item 3 (0.5ms)
+  ├─ Render Item 4 (0.5ms)
+  ├─ ... 996 more items ...
+  └─ Reconciliation (2ms)
+
+React's scheduler:
+  Work time: 5ms (adjust based on device)
+  
+Slice 1: [App, Page, List, Item1, Item2, Item3, Item4, Item5, Item6, Item7]
+          ↓ Takes ~3.5ms
+          Check: User input? NO
+          Continue
+          
+Slice 2: [Item8-Item15]
+          ↓ Takes ~4ms
+          Check: User input? YES! (User typed)
+          PAUSE rendering
+          
+Handle input: Process keystroke (1ms)
+          
+Resume:
+Slice 3: [Item16-Item23]
+          ↓ Takes ~4ms
+          Check: User input? NO
+          Continue
+          
+... and so on
+```
+
+**Priority system (Concurrency):**
+
+```
+React assigns priorities based on source:
+
+1. Immediate (Sync)
+   - Synchronous setState (rare)
+   - Event handler completion
+
+2. User Input (High)
+   - onClick, onChange, onKeyDown, etc.
+   - useTransition(startTransition)
+   - Should complete ASAP (< 100ms)
+
+3. Normal (Medium)
+   - Regular setState
+   - API responses
+   - Timer callbacks
+
+4. Background (Low)
+   - useDeferredValue
+   - Suspense loading
+   - Can be deferred indefinitely
+
+Scheduler logic:
+  
+  If high-priority work arrives:
+    Pause low-priority render
+    Process high-priority
+    Resume low-priority
+    
+  If same priority arrives:
+    Batch together
+    Render once
+```
+
+**The Fiber data structure:**
+
+```javascript
+// Simplified Fiber node
+{
+  type: ComponentFunction,      // The component
+  key: "item-123",             // For lists
+  props: { name: 'Alice' },    // Props passed in
+  state: { count: 5 },         // Component's useState values
+  hooks: [                     // Hook state
+    { type: 'state', state: [count, setCount] },
+    { type: 'effect', deps: [count] }
+  ],
+  effectTag: 'UPDATE',         // What to do: INSERT, DELETE, UPDATE
+  nextEffect: null,            // Linked list of effects
+  
+  // Tree structure
+  parent: parentFiber,         // Parent node
+  child: childFiber,           // First child
+  sibling: siblingFiber,       // Next sibling
+  
+  // Work in progress
+  workInProgress: fiberCopy,   // Double-buffering
+}
+```
+
+**Why Fiber, not call stack:**
+
+```
+Call stack approach (old React):
+  renderComponent(App)
+    renderComponent(Page)
+      renderComponent(List)
+        renderComponent(Item) ← Can't pause here
+                               ← Can't priority-flip
+                               ← Linear, recursive
+
+Fiber approach (modern React):
+  Fiber tree traversal:
+  App → Page → List → Item1 → Item2 → Item3
+  ↓
+  Can pause at any point
+  ↓
+  Can resume later
+  ↓
+  Can jump to different priority work
+  ↓
+  Can re-render parts without full tree
+```
+
+**The double-buffering trick:**
+
+```
+At any moment, React maintains two Fiber trees:
+
+Current Fiber Tree (committed, in DOM)
+  └─ Reflects current UI
+
+Work-in-Progress Fiber Tree
+  └─ Being built during render phase
+  └─ Completely separate from Current
+  
+During render phase:
+  Build Work-in-Progress tree
+  
+During commit phase:
+  If no errors:
+    Flip pointers: WorkInProgress becomes Current
+    Old Current discarded
+  If errors:
+    Discard WorkInProgress
+    Keep Current (revert to last good state)
+
+Benefit:
+  Can build new tree without affecting current
+  If render is interrupted: Current unchanged
+  If error: Current unchanged
+  Users always see stable UI
+```
+
+**When React pauses vs commits:**
+
+```
+Render phase: CAN pause
+  ├─ Computing Fiber tree
+  ├─ Running component functions
+  ├─ No side effects yet
+  ├─ No DOM mutations
+  ├─ Can be restarted/abandoned
+  └─ Perfect place to pause for high-priority work
+
+Commit phase: CANNOT pause
+  ├─ Applying DOM mutations
+  ├─ Running lifecycle methods
+  ├─ Running useLayoutEffect
+  ├─ Updating refs
+  └─ Must be atomic (all or nothing)
+```
+
+**Production implications:**
+
+```
+Why useEffect doesn't run during render:
+  Because render phase is pauseable
+  If effects ran during render:
+    Pause render for high-priority work
+    Effect half-executed
+    Inconsistent state
+  
+Solution: Effects only run in commit phase
+          (guaranteed to complete atomically)
+          
+Why setState is batched in event handlers:
+  onClick → Queue setState → Render → Commit
+  Not: onClick → setState → Render → setState → Render
+  
+Why concurrent features work:
+  High-priority setState → Pause low-priority render
+  Low-priority renders complete when idle
+```
+
+**Key takeaway:** Fiber is React's scheduler enabling interruptible rendering. It splits work into chunks, respects priorities, and keeps browser responsive. This is foundation of Concurrent React (useTransition, useDeferredValue).
 
 ---
 

@@ -1,1040 +1,1571 @@
-# Java - Professional Interview Guide
+# Java - Complete Interview Guide with Real Examples
+
+> Comprehensive Java guide covering fundamentals to advanced concepts with detailed explanations and production-grade code examples.
+
+---
 
 ## Table of Contents
-1. [Core Java Fundamentals](#core-java-fundamentals)
-2. [Object-Oriented Programming](#object-oriented-programming)
-3. [Collections Framework](#collections-framework)
-4. [Multithreading & Concurrency](#multithreading--concurrency)
+1. [JVM Fundamentals](#jvm-fundamentals)
+2. [Core Java Concepts](#core-java-concepts)
+3. [Object-Oriented Programming](#object-oriented-programming)
+4. [Collections Framework](#collections-framework)
 5. [Exception Handling](#exception-handling)
-6. [Java 8+ Features](#java-8-features)
-7. [Memory Management & JVM](#memory-management--jvm)
-8. [Design Patterns](#design-patterns)
+6. [Multithreading & Concurrency](#multithreading--concurrency)
+7. [Java 8+ Features](#java-8-features)
+8. [Memory Management & GC](#memory-management--gc)
+9. [Design Patterns](#design-patterns)
 
 ---
 
-## Core Java Fundamentals
+## JVM Fundamentals
 
-### JDK vs JRE vs JVM
-**JDK (Java Development Kit)**: Complete development environment containing JRE + development tools (compiler, debugger, javadoc). Used for developing Java applications.
+### What is the JVM?
 
-**JRE (Java Runtime Environment)**: Runtime environment containing JVM + core libraries. Used for running Java applications only.
+The **Java Virtual Machine (JVM)** is an abstract computing machine that allows a computer to run Java programs and programs written in other languages that are compiled to Java bytecode.
 
-**JVM (Java Virtual Machine)**: Abstract machine that executes bytecode. Provides platform independence. Handles memory management, garbage collection, and security.
+**Key insight:** The JVM acts as an intermediary between your code and the actual computer hardware. This is what gives Java its famous "Write Once, Run Anywhere" (WORA) capability.
 
-**Key takeaway:** JDK = develop, JRE = run, JVM = executes bytecode.
+#### JDK vs JRE vs JVM - The Complete Picture
 
----
-
-### Compile and Execution Process
-Java source code (`.java`) → Compiled by `javac` → Bytecode (`.class`) → JVM loads and executes bytecode → Platform-specific machine code via JIT compiler.
-
-**Platform Independence:** Write Once, Run Anywhere (WORA). Bytecode runs on any platform with JVM.
-
-**Key takeaway:** Source → Bytecode → JVM → Machine code.
-
----
-
-### Data Types
-**Primitive (8 types):** byte (1 byte), short (2), int (4), long (8), float (4), double (8), char (2), boolean (1 bit).
-
-**Reference Types:** Objects, arrays, interfaces. Store memory addresses, not actual values. Default value is `null`.
-
-**Autoboxing/Unboxing:** Automatic conversion between primitives and wrapper classes (Integer, Double, etc.).
-
-**Key takeaway:** Primitives = value, References = address.
-
----
-
-### String, StringBuilder, StringBuffer
-**String:** Immutable. Every modification creates new object. Thread-safe by immutability. Use for constant strings.
-
-**StringBuilder:** Mutable. Not synchronized. Faster for single-threaded string manipulation.
-
-**StringBuffer:** Mutable. Synchronized (thread-safe). Slower than StringBuilder due to synchronization overhead.
-
-**Key takeaway:** Immutable String, StringBuilder (fast), StringBuffer (thread-safe).
-
----
-
-### == vs equals()
-**==:** Compares references (memory addresses) for objects. Compares values for primitives.
-
-**equals():** Compares object content. Overrideable for custom comparison. Default implementation in `Object` class uses `==`.
-
-```java
-String a = new String("hello");
-String b = new String("hello");
-a == b;        // false (different objects)
-a.equals(b);   // true (same content)
+```
+┌─────────────────────────────────────────────┐
+│             JDK (Java Development Kit)      │ ← Use this to DEVELOP
+├─────────────────────────────────────────────┤
+│ Contains:                                    │
+│ ├─ Compiler (javac)                         │
+│ ├─ Tools (debugger, profiler, etc.)         │
+│ ├─ JRE (below)                              │
+│ └─ Documentation                            │
+└─────────────────────────────────────────────┘
+           ↓ (includes)
+┌─────────────────────────────────────────────┐
+│      JRE (Java Runtime Environment)         │ ← Use this to RUN
+├─────────────────────────────────────────────┤
+│ Contains:                                    │
+│ ├─ JVM (below)                              │
+│ └─ Core libraries (rt.jar, etc.)            │
+└─────────────────────────────────────────────┘
+           ↓ (includes)
+┌─────────────────────────────────────────────┐
+│    JVM (Java Virtual Machine)               │ ← Actually EXECUTES code
+├─────────────────────────────────────────────┤
+│ Does:                                        │
+│ ├─ Loads bytecode                           │
+│ ├─ Converts to machine code (JIT)           │
+│ ├─ Manages memory (Garbage Collection)      │
+│ └─ Provides security sandbox                │
+└─────────────────────────────────────────────┘
 ```
 
-**Key takeaway:** == = reference, equals() = content.
+**Real analogy:** 
+- **JDK** = Kitchen with chef (you develop recipes)
+- **JRE** = Delivery service (delivers what you made)
+- **JVM** = Oven that actually cooks (executes the recipe)
+
+#### Compilation and Execution Flow
+
+```
+Step 1: Write Java Code
+┌──────────────────┐
+│ HelloWorld.java  │  ← Human-readable source code
+└────────┬─────────┘
+         │
+Step 2: Compile with javac
+┌────────────────────────────────────────┐
+│ $ javac HelloWorld.java                │
+│ (Compiler converts Java → Bytecode)    │
+└────────┬───────────────────────────────┘
+         │
+Step 3: Bytecode Created
+┌──────────────────┐
+│ HelloWorld.class │  ← Platform-independent bytecode
+└────────┬─────────┘
+         │
+Step 4: Run with java command
+┌────────────────────────────────────────┐
+│ $ java HelloWorld                      │
+│ (Loads bytecode into JVM)              │
+└────────┬───────────────────────────────┘
+         │
+Step 5: JVM Executes
+┌────────────────────────────────────────────────┐
+│ JVM reads bytecode instructions and:          │
+│ ├─ Interprets (slower, line by line)          │
+│ └─ JIT compiles hot code (faster, to native)  │
+└────────┬───────────────────────────────────────┘
+         │
+Step 6: Native Machine Code Execution
+┌────────────────────────────────────────┐
+│ CPU executes actual machine code       │
+│ (Windows/Linux/Mac - platform specific)│
+└────────────────────────────────────────┘
+```
+
+**Example code:**
+
+```java
+// HelloWorld.java
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}
+```
+
+When you compile: `javac HelloWorld.java`
+- Creates `HelloWorld.class` (bytecode)
+- The bytecode is the SAME regardless of OS
+
+When you run: `java HelloWorld`
+- JVM reads the bytecode
+- JVM's JIT compiler converts frequently used bytecode to native machine code
+- Program runs
+
+**Why this matters:** You can ship the `.class` file to Windows, Linux, or Mac - it will run on all!
+
+---
+
+### Memory Areas in JVM
+
+The JVM allocates memory into different areas for different purposes:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   JVM Memory Layout                     │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ HEAP (Shared - Garbage Collected)                │  │
+│  │ - All objects created here                       │  │
+│  │ - Freed automatically by GC                      │  │
+│  │ - Can cause OutOfMemoryError                     │  │
+│  │ Example: new User(), new ArrayList<>()           │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ STACK (Per Thread - Not Garbage Collected)       │  │
+│  │ - Method calls and local variables               │  │
+│  │ - Each thread has its own stack                  │  │
+│  │ - Automatically freed when method returns        │  │
+│  │ - Can cause StackOverflowError                   │  │
+│  │ Example: int x = 5; (stored in stack)            │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ METHOD AREA (Shared - Class Metadata)            │  │
+│  │ - Class structures, method data                  │  │
+│  │ - Static variables                              │  │
+│  │ - Method code                                   │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Example demonstrating stack vs heap:**
+
+```java
+public class MemoryExample {
+    public static void main(String[] args) {
+        int age = 25;                    // STACK: primitive value
+        String name = "John";            // STACK: reference, HEAP: "John" object
+        User user = new User("John", 25); // STACK: reference, HEAP: User object
+    }
+}
+
+class User {
+    String name;
+    int age;
+    
+    User(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+}
+
+/* Memory visualization:
+   
+   STACK (main thread)              HEAP
+   ───────────────────              ────
+   age: 25                          User object
+   name: ──────────┐                ├─ name: "John"
+   user: ─────┐   │                ├─ age: 25
+              │   │
+              │   └────────→ "John" (String object)
+              │
+              └────────────→ User object
+*/
+```
+
+**Key differences:**
+
+| Aspect | Stack | Heap |
+|--------|-------|------|
+| **Speed** | Fast (LIFO) | Slower (complex allocation) |
+| **Size** | Smaller | Larger |
+| **Thread** | Per thread | Shared |
+| **Cleanup** | Automatic (when method ends) | GC cleanup |
+| **Error** | StackOverflowError (too deep calls) | OutOfMemoryError (too many objects) |
+
+---
+
+## Core Java Concepts
+
+### String, StringBuilder, StringBuffer Explained
+
+Strings in Java are one of the most important concepts. Let me explain why there are 3 different types:
+
+#### 1. String - Immutable
+
+```java
+public class StringExample {
+    public static void main(String[] args) {
+        // Creating strings
+        String s1 = "Hello";
+        String s2 = "Hello";
+        String s3 = new String("Hello");
+        
+        // String intern: s1 and s2 point to SAME object in memory
+        System.out.println(s1 == s2);           // true (same reference)
+        System.out.println(s1 == s3);           // false (different objects)
+        System.out.println(s1.equals(s3));      // true (same content)
+    }
+}
+```
+
+**Why immutable?** Once created, a String cannot be changed. Every operation creates a NEW string:
+
+```java
+String original = "Hello";
+String modified = original + " World";  // Creates NEW String object
+// original is still "Hello" (unchanged)
+// modified is "Hello World" (new object in memory)
+
+// This is INEFFICIENT when done in loops:
+String result = "";
+for (int i = 0; i < 100000; i++) {
+    result = result + i;  // Creates 100,000 new String objects!
+}
+```
+
+#### 2. StringBuilder - Mutable (Single-threaded)
+
+```java
+public class StringBuilderExample {
+    public static void main(String[] args) {
+        // StringBuilder is mutable and FAST
+        StringBuilder sb = new StringBuilder();
+        
+        for (int i = 0; i < 100000; i++) {
+            sb.append(i);  // REUSES same object, just modifies internally
+        }
+        
+        String result = sb.toString();
+        System.out.println(result.length()); // 488895
+        
+        // StringBuilder operations:
+        sb.append("Hello");     // Add to end
+        sb.insert(0, "Start");  // Insert at position
+        sb.delete(0, 5);        // Delete range
+        sb.reverse();           // Reverse
+    }
+}
+```
+
+**Performance comparison:**
+
+```java
+// SLOW: Using String concatenation
+long start = System.nanoTime();
+String result = "";
+for (int i = 0; i < 100000; i++) {
+    result = result + i;  // O(n²) time complexity
+}
+long stringTime = System.nanoTime() - start;
+
+// FAST: Using StringBuilder
+start = System.nanoTime();
+StringBuilder sb = new StringBuilder();
+for (int i = 0; i < 100000; i++) {
+    sb.append(i);  // O(n) time complexity
+}
+result = sb.toString();
+long sbTime = System.nanoTime() - start;
+
+System.out.println("String concat time: " + stringTime);
+System.out.println("StringBuilder time: " + sbTime);
+// StringBuilder is typically 100-1000x faster!
+```
+
+#### 3. StringBuffer - Mutable (Thread-safe)
+
+```java
+public class StringBufferExample {
+    public static void main(String[] args) {
+        // StringBuffer is synchronized (thread-safe)
+        StringBuffer buffer = new StringBuffer();
+        
+        buffer.append("Hello");
+        buffer.append(" ");
+        buffer.append("World");
+        
+        System.out.println(buffer.toString()); // "Hello World"
+    }
+}
+
+// StringBuffer vs StringBuilder in multi-threaded context:
+public class ThreadSafeExample {
+    public static void main(String[] args) throws InterruptedException {
+        StringBuffer buffer = new StringBuffer(); // Thread-safe
+        
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                buffer.append("T1");
+            }
+        });
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 1000; i++) {
+                buffer.append("T2");
+            }
+        });
+        
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        
+        System.out.println("Length: " + buffer.length()); // Always 6000 (thread-safe)
+    }
+}
+```
+
+**When to use:**
+
+| Type | When | Example |
+|------|------|---------|
+| **String** | Immutable, constants | `final String SQL = "SELECT * FROM users"` |
+| **StringBuilder** | Building strings in loops (single thread) | `sb.append()` in loop |
+| **StringBuffer** | Building strings in multi-threaded code | Rarely used anymore |
+
+---
+
+### equals() vs == Explained
+
+This is one of the most common interview questions. Let me explain thoroughly:
+
+```java
+public class EqualsVsEqualsExample {
+    public static void main(String[] args) {
+        // PRIMITIVES: == compares VALUE
+        int a = 5;
+        int b = 5;
+        System.out.println(a == b);  // true (same value)
+        
+        // OBJECTS: == compares REFERENCE (memory address)
+        String s1 = new String("Hello");
+        String s2 = new String("Hello");
+        System.out.println(s1 == s2);      // false (different objects)
+        System.out.println(s1.equals(s2)); // true (same content)
+    }
+}
+```
+
+**Visual representation:**
+
+```
+String s1 = new String("Hello");
+String s2 = new String("Hello");
+
+Memory:
+┌─────────────────────────────────────┐
+│ Stack             │ Heap             │
+├─────────────────────────────────────┤
+│ s1: ─────────────→│ String object 1  │
+│                   │ value: "Hello"   │
+│                   │                  │
+│ s2: ─────────────→│ String object 2  │
+│                   │ value: "Hello"   │
+└─────────────────────────────────────┘
+
+s1 == s2       → false (different memory addresses)
+s1.equals(s2)  → true (same content)
+```
+
+**Common mistake - with strings:**
+
+```java
+String s1 = "Hello";     // String pool
+String s2 = "Hello";     // Same string from pool
+System.out.println(s1 == s2); // true! (same reference in string pool)
+
+String s3 = new String("Hello");
+System.out.println(s1 == s3); // false! (different objects)
+```
+
+**Why `.equals()` matters:**
+
+```java
+public class User {
+    String email;
+    
+    User(String email) {
+        this.email = email;
+    }
+    
+    // WRONG: Using == to compare strings
+    public boolean emailMatches(String other) {
+        return this.email == other;  // May return false even if content is same
+    }
+    
+    // CORRECT: Using .equals()
+    public boolean emailMatches(String other) {
+        return this.email.equals(other);  // Compares content
+    }
+}
+
+// Usage
+User user = new User("john@example.com");
+String emailFromDB = new String("john@example.com"); // Different object
+
+user.emailMatches(emailFromDB);  // WRONG version returns false!
+                                 // CORRECT version returns true!
+```
 
 ---
 
 ### hashCode() and equals() Contract
-If two objects are equal (`equals()` returns true), they MUST have the same `hashCode()`.
 
-If `hashCode()` is same, objects may or may not be equal.
+When you override `equals()`, you MUST also override `hashCode()`. Let me show why:
 
-**Why it matters:** HashMap, HashSet rely on this contract. Broken contract = wrong behavior in hash-based collections.
+```java
+public class User {
+    String email;
+    String name;
+    
+    User(String email, String name) {
+        this.email = email;
+        this.name = name;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        
+        User user = (User) obj;
+        return Objects.equals(email, user.email);
+    }
+    
+    // MUST override hashCode() also!
+    @Override
+    public int hashCode() {
+        return Objects.hash(email);
+    }
+}
 
-**Best practice:** Always override both together. Use all fields used in `equals()` for `hashCode()`.
+// Why this matters:
+public class HashCodeExample {
+    public static void main(String[] args) {
+        Map<User, String> userMap = new HashMap<>();
+        
+        User user1 = new User("john@example.com", "John");
+        userMap.put(user1, "John's data");
+        
+        User user2 = new User("john@example.com", "John");
+        
+        // If we only override equals() but NOT hashCode():
+        // user1.equals(user2) returns true
+        // But user1.hashCode() != user2.hashCode()
+        // So HashMap treats them as different keys!
+        
+        System.out.println(user1.equals(user2));  // true
+        System.out.println(userMap.get(user2));   // null (WRONG!)
+        
+        // With proper hashCode(), it works:
+        userMap.put(user2, "John's data");
+        System.out.println(userMap.get(user2));   // "John's data" (CORRECT!)
+    }
+}
+```
 
-**Key takeaway:** Equal objects = same hashCode. Override both together.
+**Contract rules:**
 
----
+```
+If a.equals(b) is true, then a.hashCode() MUST equal b.hashCode()
 
-### final, finally, finalize
-**final:** Keyword. Variable = constant, method = cannot override, class = cannot extend.
+Example:
+User a = new User("john@example.com");
+User b = new User("john@example.com");
 
-**finally:** Block in try-catch. Always executes (except System.exit()). Used for cleanup (close resources).
-
-**finalize():** Deprecated method called by GC before object destruction. Unreliable timing. Use try-with-resources instead.
-
-**Key takeaway:** final = immutability/restriction, finally = cleanup block, finalize = deprecated.
-
----
-
-### static Keyword
-**Static variable:** Shared across all instances. One copy per class. Loaded at class loading time.
-
-**Static method:** Belongs to class, not instance. Cannot access instance variables/methods directly. Called via class name.
-
-**Static block:** Executes once when class is loaded. Used for static initialization.
-
-**Key takeaway:** static = class-level, not instance-level.
+a.equals(b)           → true
+a.hashCode() == b.hashCode() → true (REQUIRED!)
+```
 
 ---
 
 ## Object-Oriented Programming
 
-### Four Pillars of OOP
+### The Four Pillars of OOP - With Real Code
 
-#### 1. Encapsulation
-Bundling data (fields) and methods operating on data within a class. Hide internal state using `private` fields. Provide public getters/setters for controlled access.
+#### 1. Encapsulation - Hide Implementation
 
-**Benefits:** Data hiding, flexibility (change implementation without affecting clients), validation in setters.
-
-**Key takeaway:** Hide data, expose through methods.
-
----
-
-#### 2. Inheritance
-Class acquires properties and behaviors of parent class using `extends`. Promotes code reuse. Java supports single inheritance (one parent class).
-
-**Types:** Single, multilevel, hierarchical. Multiple inheritance via interfaces only.
-
-**Key takeaway:** IS-A relationship. Code reuse.
-
----
-
-#### 3. Polymorphism
-**Compile-time (Method Overloading):** Same method name, different parameters (number, type, order). Resolved at compile time.
-
-**Runtime (Method Overriding):** Subclass provides specific implementation of parent method. Resolved at runtime via dynamic method dispatch.
+**Without encapsulation (BAD):**
 
 ```java
-Parent p = new Child(); // Upcasting
-p.display(); // Calls Child's display() - Runtime polymorphism
+public class BankAccount {
+    public double balance;  // Anyone can access and modify!
+}
+
+// Usage
+BankAccount account = new BankAccount();
+account.balance = 1000;
+account.balance = -5000;  // WRONG! No validation!
+account.balance = 999999; // WRONG! Fraud!
 ```
 
-**Key takeaway:** Overloading = compile-time, Overriding = runtime.
+**With encapsulation (GOOD):**
 
----
+```java
+public class BankAccount {
+    private double balance;  // Only accessible through methods
+    
+    public void deposit(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+        this.balance += amount;
+    }
+    
+    public void withdraw(double amount) {
+        if (amount > balance) {
+            throw new IllegalArgumentException("Insufficient funds");
+        }
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+        this.balance -= amount;
+    }
+    
+    public double getBalance() {
+        return balance;
+    }
+}
 
-#### 4. Abstraction
-Hiding implementation details, showing only functionality. Achieved via abstract classes and interfaces.
+// Usage
+BankAccount account = new BankAccount();
+account.deposit(1000);    // VALID: balance = 1000
+account.withdraw(500);    // VALID: balance = 500
+account.withdraw(600);    // INVALID: throws exception
+account.balance = -5000;  // COMPILE ERROR! (private, cannot access)
+```
 
-**Abstract class:** Cannot instantiate. Can have abstract (no body) and concrete methods. Use when sharing code among related classes.
+#### 2. Inheritance - Code Reuse
 
-**Interface:** 100% abstraction (until Java 8). Can have default/static methods (Java 8+). Multiple inheritance via interfaces.
+**Example: Employee hierarchy**
 
-**Key takeaway:** Hide complexity, show essential features.
+```java
+// Base class
+public class Employee {
+    protected String name;
+    protected double salary;
+    
+    public Employee(String name, double salary) {
+        this.name = name;
+        this.salary = salary;
+    }
+    
+    public void work() {
+        System.out.println(name + " is working");
+    }
+    
+    public double getSalary() {
+        return salary;
+    }
+}
 
----
+// Subclass - Manager inherits from Employee
+public class Manager extends Employee {
+    private int teamSize;
+    
+    public Manager(String name, double salary, int teamSize) {
+        super(name, salary);  // Call parent constructor
+        this.teamSize = teamSize;
+    }
+    
+    @Override
+    public void work() {
+        System.out.println(name + " is managing team of " + teamSize);
+    }
+    
+    public void conductMeeting() {
+        System.out.println("Conducting meeting with team");
+    }
+}
 
-### Abstract Class vs Interface
-**Abstract Class:**
-- Can have state (instance variables)
-- Can have constructors
-- Can have concrete methods
-- Single inheritance only
-- Use when: Classes share common code
+// Subclass - Developer inherits from Employee
+public class Developer extends Employee {
+    private String programmingLanguage;
+    
+    public Developer(String name, double salary, String language) {
+        super(name, salary);
+        this.programmingLanguage = language;
+    }
+    
+    @Override
+    public void work() {
+        System.out.println(name + " is coding in " + programmingLanguage);
+    }
+}
 
-**Interface:**
-- No state (only constants: `public static final`)
-- No constructors
-- All methods abstract (before Java 8)
-- Multiple inheritance supported
-- Use when: Defining contract/behavior
+// Usage
+public class Main {
+    public static void main(String[] args) {
+        Employee manager = new Manager("Alice", 80000, 5);
+        Employee developer = new Developer("Bob", 70000, "Java");
+        
+        manager.work();      // Alice is managing team of 5
+        developer.work();    // Bob is coding in Java
+        
+        // Both have same interface but different behavior
+    }
+}
+```
 
-**Java 8+:** Interfaces can have default and static methods.
+#### 3. Polymorphism - Same Interface, Different Behavior
 
-**Key takeaway:** Abstract class = partial abstraction + state, Interface = contract.
+**Runtime Polymorphism (Method Overriding):**
 
----
+```java
+public class PaymentExample {
+    // We don't know which payment method will be used at runtime
+    public static void processPayment(PaymentMethod payment, double amount) {
+        payment.pay(amount);  // Calls appropriate method based on actual type
+    }
+}
 
-### Method Overloading vs Overriding
-**Overloading (Compile-time polymorphism):**
-- Same class
-- Same method name, different parameters
-- Return type can differ
-- Resolved at compile time
+interface PaymentMethod {
+    void pay(double amount);
+}
 
-**Overriding (Runtime polymorphism):**
-- Parent-child relationship
-- Exact same method signature
-- Return type must be same or covariant
-- @Override annotation recommended
-- Cannot reduce visibility
+class CreditCardPayment implements PaymentMethod {
+    @Override
+    public void pay(double amount) {
+        System.out.println("Processing credit card payment: $" + amount);
+        // Add 3% fee
+        System.out.println("Fee: $" + (amount * 0.03));
+    }
+}
 
-**Key takeaway:** Overloading = different params, Overriding = same signature.
+class PayPalPayment implements PaymentMethod {
+    @Override
+    public void pay(double amount) {
+        System.out.println("Processing PayPal payment: $" + amount);
+        // Add 2% fee
+        System.out.println("Fee: $" + (amount * 0.02));
+    }
+}
 
----
+class BitcoinPayment implements PaymentMethod {
+    @Override
+    public void pay(double amount) {
+        System.out.println("Processing Bitcoin payment: " + amount + " USD");
+        // No fee
+    }
+}
 
-### Constructor
-Special method to initialize objects. Same name as class. No return type.
+// Usage
+PaymentExample.processPayment(new CreditCardPayment(), 100);
+// Output: Processing credit card payment: $100
+//         Fee: $3.0
 
-**Default Constructor:** Provided by compiler if no constructor defined. No parameters.
+PaymentExample.processPayment(new PayPalPayment(), 100);
+// Output: Processing PayPal payment: $100
+//         Fee: $2.0
 
-**Parameterized Constructor:** Takes arguments for custom initialization.
+PaymentExample.processPayment(new BitcoinPayment(), 100);
+// Output: Processing Bitcoin payment: 100.0 USD
+```
 
-**Constructor Chaining:** Calling one constructor from another using `this()` (same class) or `super()` (parent class).
+**Compile-time Polymorphism (Method Overloading):**
 
-**Key takeaway:** Initialization method. No return type. this() or super() must be first line.
+```java
+public class Calculator {
+    // Same method name, different parameters
+    
+    public static int add(int a, int b) {
+        return a + b;
+    }
+    
+    public static double add(double a, double b) {
+        return a + b;
+    }
+    
+    public static String add(String a, String b) {
+        return a + b;
+    }
+    
+    public static int add(int a, int b, int c) {
+        return a + b + c;
+    }
+}
 
----
+// Usage
+System.out.println(Calculator.add(5, 10));              // 15 (int method)
+System.out.println(Calculator.add(5.5, 10.5));          // 16.0 (double method)
+System.out.println(Calculator.add("Hello", "World"));   // "HelloWorld" (String method)
+System.out.println(Calculator.add(1, 2, 3));            // 6 (3 params method)
+```
 
-### this vs super
-**this:** Reference to current object. Access instance variables, call other constructors (`this()`), pass current object.
+#### 4. Abstraction - Hide Complexity
 
-**super:** Reference to parent class object. Access parent fields/methods, call parent constructor (`super()`).
+```java
+// Abstract class - defines contract for subclasses
+public abstract class Animal {
+    private String name;
+    
+    public Animal(String name) {
+        this.name = name;
+    }
+    
+    // Abstract method - MUST be implemented by subclasses
+    abstract void makeSound();
+    
+    // Concrete method - can be used by all subclasses
+    public void sleep() {
+        System.out.println(name + " is sleeping");
+    }
+}
 
-**Key takeaway:** this = current object, super = parent class.
+public class Dog extends Animal {
+    public Dog(String name) {
+        super(name);
+    }
+    
+    @Override
+    void makeSound() {
+        System.out.println("Woof! Woof!");
+    }
+}
 
----
+public class Cat extends Animal {
+    public Cat(String name) {
+        super(name);
+    }
+    
+    @Override
+    void makeSound() {
+        System.out.println("Meow! Meow!");
+    }
+}
 
-### Access Modifiers
-**private:** Same class only.
-**default (no modifier):** Same package.
-**protected:** Same package + subclasses (even different package).
-**public:** Everywhere.
+// Real-world example: Abstract shapes
+public abstract class Shape {
+    abstract double getArea();
+    abstract double getPerimeter();
+}
 
-**Key takeaway:** Increasing visibility: private → default → protected → public.
+public class Circle extends Shape {
+    private double radius;
+    
+    public Circle(double radius) {
+        this.radius = radius;
+    }
+    
+    @Override
+    double getArea() {
+        return Math.PI * radius * radius;
+    }
+    
+    @Override
+    double getPerimeter() {
+        return 2 * Math.PI * radius;
+    }
+}
+
+public class Rectangle extends Shape {
+    private double width, height;
+    
+    public Rectangle(double width, double height) {
+        this.width = width;
+        this.height = height;
+    }
+    
+    @Override
+    double getArea() {
+        return width * height;
+    }
+    
+    @Override
+    double getPerimeter() {
+        return 2 * (width + height);
+    }
+}
+```
 
 ---
 
 ## Collections Framework
 
-### Collection Hierarchy
-```
-Collection (interface)
-├── List (ordered, duplicates allowed)
-│   ├── ArrayList
-│   ├── LinkedList
-│   └── Vector (legacy, synchronized)
-├── Set (no duplicates)
-│   ├── HashSet (no order)
-│   ├── LinkedHashSet (insertion order)
-│   └── TreeSet (sorted)
-└── Queue
-    ├── PriorityQueue
-    └── Deque (ArrayDeque, LinkedList)
-
-Map (separate hierarchy)
-├── HashMap (no order)
-├── LinkedHashMap (insertion order)
-├── TreeMap (sorted by keys)
-└── Hashtable (legacy, synchronized)
-```
-
-**Key takeaway:** List = ordered + duplicates, Set = no duplicates, Map = key-value.
-
----
-
-### ArrayList vs LinkedList
-**ArrayList:**
-- Dynamic array
-- Fast random access: O(1)
-- Slow insertion/deletion (middle): O(n) - shifting required
-- Better for read-heavy operations
-- Less memory overhead
-
-**LinkedList:**
-- Doubly linked list
-- Slow random access: O(n)
-- Fast insertion/deletion: O(1) at known position
-- Better for frequent insertions/deletions
-- More memory (stores node references)
-
-**Key takeaway:** ArrayList = random access, LinkedList = insertions/deletions.
-
----
-
-### HashMap Internal Working
-**Structure:** Array of buckets (Node<K,V>[]). Each bucket is a linked list (before Java 8) or balanced tree (Java 8+, when bucket size > 8).
-
-**put() operation:**
-1. Calculate `hashCode()` of key
-2. Apply hash function to get bucket index
-3. If bucket empty, insert new node
-4. If collision, check `equals()` - update if same key, else add to list/tree
-
-**get() operation:**
-1. Calculate hash, find bucket
-2. Traverse list/tree using `equals()` to find key
-
-**Load Factor:** Default 0.75. When size exceeds capacity × load factor, rehashing occurs (capacity doubles).
-
-**Java 8 optimization:** Buckets convert to balanced trees when size > 8 (O(log n) instead of O(n)).
-
-**Key takeaway:** Array + linked list/tree. hashCode() for bucket, equals() for key match.
-
----
-
-### HashMap vs Hashtable vs ConcurrentHashMap
-**HashMap:**
-- Not synchronized (not thread-safe)
-- Allows one null key, multiple null values
-- Fast (no synchronization overhead)
-- Use in single-threaded environments
-
-**Hashtable:**
-- Synchronized (thread-safe)
-- No null keys/values
-- Slow (method-level synchronization)
-- Legacy class (avoid in new code)
-
-**ConcurrentHashMap:**
-- Thread-safe via segment locking (Java 7) / CAS operations (Java 8+)
-- No null keys/values
-- Better performance than Hashtable (finer-grained locking)
-- Use in multi-threaded environments
-
-**Key takeaway:** HashMap = fast, ConcurrentHashMap = thread-safe + fast, Hashtable = legacy.
-
----
-
-### HashSet vs TreeSet vs LinkedHashSet
-**HashSet:**
-- Backed by HashMap
-- No order
-- O(1) add/remove/contains
-- Allows one null
-
-**TreeSet:**
-- Backed by TreeMap (Red-Black tree)
-- Sorted order (natural or custom Comparator)
-- O(log n) operations
-- No null (throws NPE)
-
-**LinkedHashSet:**
-- Maintains insertion order
-- Slightly slower than HashSet
-- O(1) operations
-- Allows one null
-
-**Key takeaway:** HashSet = fast, TreeSet = sorted, LinkedHashSet = insertion order.
-
----
-
-### Comparable vs Comparator
-**Comparable:**
-- Interface with `compareTo()` method
-- Natural ordering (one way to compare)
-- Modify the class itself
-- Example: String, Integer implement Comparable
+### ArrayList vs LinkedList - When to Use Each
 
 ```java
-class Employee implements Comparable<Employee> {
-    public int compareTo(Employee e) {
-        return this.id - e.id; // Sort by ID
+public class ArrayListVsLinkedListExample {
+    public static void main(String[] args) {
+        // ARRAYLIST: Fast for accessing, slow for inserting/deleting
+        List<String> arrayList = new ArrayList<>();
+        long start = System.nanoTime();
+        for (int i = 0; i < 100000; i++) {
+            arrayList.add(i, "Element");  // INSERT at beginning - O(n)
+        }
+        long arrayListTime = System.nanoTime() - start;
+        
+        // LINKEDLIST: Slow for accessing, fast for inserting/deleting
+        List<String> linkedList = new LinkedList<>();
+        start = System.nanoTime();
+        for (int i = 0; i < 100000; i++) {
+            linkedList.add(0, "Element"); // INSERT at beginning - O(1)
+        }
+        long linkedListTime = System.nanoTime() - start;
+        
+        System.out.println("ArrayList insertion time: " + arrayListTime);
+        System.out.println("LinkedList insertion time: " + linkedListTime);
+        
+        // Results show LinkedList is 100x faster for insertions at beginning
     }
 }
 ```
 
-**Comparator:**
-- Separate interface with `compare()` method
-- Multiple sorting sequences
-- Don't modify original class
-- Pass to sort methods
+**Visual representation:**
 
-```java
-Comparator<Employee> byName = (e1, e2) -> e1.name.compareTo(e2.name);
-Collections.sort(employees, byName);
+```
+ARRAYLIST:
+[A][B][C][D][E]  ← Contiguous memory
+
+Inserting X at position 1:
+Step 1: Shift D and E: [A][B][C][D][_]
+Step 2: Shift C and D: [A][B][_][C][D]
+Step 3: Shift B and C: [A][_][B][C][D]
+Step 4: Insert X:     [A][X][B][C][D]
+Result: O(n) time complexity
+
+LINKEDLIST:
+A ↔ B ↔ C ↔ D ↔ E
+
+Inserting X at position 1:
+Step 1: Create X node
+Step 2: X.next = B; A.prev = X; X.prev = A; B.prev = X
+Result: O(1) time complexity
 ```
 
-**Key takeaway:** Comparable = natural order in class, Comparator = custom external sorting.
+### HashMap - Internal Working
 
----
-
-### Iterator vs ListIterator
-**Iterator:**
-- Traverse forward only
-- Works on all Collections
-- Methods: `hasNext()`, `next()`, `remove()`
-
-**ListIterator:**
-- Traverse both directions
-- Only for List implementations
-- Additional methods: `hasPrevious()`, `previous()`, `add()`, `set()`
-
-**Key takeaway:** Iterator = forward, ListIterator = bidirectional + modification.
-
----
-
-### fail-fast vs fail-safe
-**fail-fast:**
-- Throws `ConcurrentModificationException` if collection modified during iteration
-- Uses `modCount` to detect structural changes
-- Examples: ArrayList, HashMap iterators
-- Performance: Better (no copying)
-
-**fail-safe:**
-- Works on clone/snapshot of collection
-- No exception on concurrent modification
-- May not reflect latest changes
-- Examples: ConcurrentHashMap, CopyOnWriteArrayList
-- Performance: Slower (copying overhead)
-
-**Key takeaway:** fail-fast = exception on modification, fail-safe = works on copy.
-
----
-
-## Multithreading & Concurrency
-
-### Thread Lifecycle
-**States:**
-1. **New:** Thread created but not started
-2. **Runnable:** Ready to run, waiting for CPU
-3. **Running:** Executing
-4. **Blocked/Waiting:** Waiting for resource/notification
-5. **Terminated:** Execution completed
-
-**Key takeaway:** New → Runnable → Running → Terminated (with Blocked/Waiting in between).
-
----
-
-### Creating Threads
-**1. Extend Thread class:**
 ```java
-class MyThread extends Thread {
-    public void run() { /* task */ }
+public class HashMapInternalExample {
+    public static void main(String[] args) {
+        Map<String, Integer> map = new HashMap<>();
+        
+        // When you do: map.put("John", 25)
+        // 1. Calculate hashCode("John") = some integer
+        // 2. Apply hash function: index = hashCode % capacity
+        // 3. Place at that bucket
+        
+        map.put("John", 25);
+        map.put("Alice", 30);
+        map.put("Bob", 28);
+        
+        System.out.println(map.get("John"));   // 25 - retrieves in O(1)
+        
+        // Hash collision example:
+        Map<Integer, String> map2 = new HashMap<>();
+        map2.put(1, "One");
+        map2.put(2, "Two");
+        map2.put(1, "ONE");  // Same key - overwrites value
+        
+        System.out.println(map2.size()); // 2 (not 3)
+    }
 }
-new MyThread().start();
 ```
 
-**2. Implement Runnable interface (preferred):**
+**HashMap visual:**
+
+```
+HashMap bucket array (capacity = 16):
+
+Index  Bucket
+───────────────────────────────────────
+  0  │ null
+  1  │ Entry{key="Alice", value=30}
+  2  │ null
+  3  │ Entry{key="John", value=25} → Entry{key="Bob", value=28}
+     │ (collision: both hash to index 3)
+ ... │ ...
+ 15  │ null
+```
+
+When you call `map.get("John")`:
+1. Calculate hash("John") → index 3
+2. Go to bucket 3
+3. Linear search: "John" matches, return 25
+
+**Hash collision handling (Java 8+):**
+
 ```java
-class MyTask implements Runnable {
-    public void run() { /* task */ }
+public class HashCollisionExample {
+    public static void main(String[] args) {
+        Map<String, String> map = new HashMap<>();
+        
+        // When multiple values hash to same bucket:
+        // Java < 8: Uses linked list (O(n) lookup when many collisions)
+        // Java 8+:  Converts to balanced tree when bucket size > 8 (O(log n))
+        
+        // Simulate many collisions
+        for (int i = 0; i < 20; i++) {
+            map.put("Key" + i, "Value" + i);
+        }
+        
+        // If they all hash to same bucket:
+        // Java < 8: O(20) lookup time
+        // Java 8+:  O(log 20) ≈ O(5) lookup time
+    }
 }
-new Thread(new MyTask()).start();
 ```
-
-**3. Callable & Future (returns result):**
-```java
-Callable<Integer> task = () -> 42;
-Future<Integer> result = executor.submit(task);
-```
-
-**Key takeaway:** Runnable = preferred (composition), Callable = returns result.
-
----
-
-### synchronized Keyword
-Ensures only one thread executes a block/method at a time. Acquires intrinsic lock (monitor) on object.
-
-**Method level:**
-```java
-synchronized void method() { /* critical section */ }
-// Locks on 'this' object
-```
-
-**Block level (better granularity):**
-```java
-synchronized(lockObject) { /* critical section */ }
-```
-
-**Static method:** Locks on Class object.
-
-**Key takeaway:** Mutual exclusion. Prevents race conditions.
-
----
-
-### wait(), notify(), notifyAll()
-**wait():** Releases lock and waits until another thread calls `notify()` or `notifyAll()` on same object. Must be called within synchronized block.
-
-**notify():** Wakes up one waiting thread (random).
-
-**notifyAll():** Wakes up all waiting threads.
-
-**Producer-Consumer pattern:** Producer calls `notifyAll()` after producing. Consumer calls `wait()` when queue empty.
-
-**Key takeaway:** Inter-thread communication. Must synchronize on same object.
-
----
-
-### volatile Keyword
-Ensures variable changes are visible to all threads immediately. Prevents caching in thread-local memory. Every read/write goes to main memory.
-
-**Use case:** Flags (boolean status variables) shared across threads.
-
-**Limitations:** Not atomic for compound operations (i++). Use `AtomicInteger` for atomicity.
-
-**Key takeaway:** Visibility guarantee. Not for complex operations.
-
----
-
-### Thread Pool & Executors
-**ExecutorService:** Manages thread pool. Reuses threads instead of creating new ones.
-
-**Types:**
-- **FixedThreadPool:** Fixed number of threads
-- **CachedThreadPool:** Creates threads as needed, reuses idle threads
-- **SingleThreadExecutor:** Single worker thread
-- **ScheduledThreadPool:** Scheduled/periodic tasks
-
-```java
-ExecutorService executor = Executors.newFixedThreadPool(10);
-executor.submit(() -> { /* task */ });
-executor.shutdown();
-```
-
-**Key takeaway:** Thread reuse. Better resource management than manual threads.
-
----
-
-### Deadlock
-Two or more threads waiting for each other indefinitely. Each holds a resource and waits for another.
-
-**Conditions for deadlock:**
-1. Mutual exclusion
-2. Hold and wait
-3. No preemption
-4. Circular wait
-
-**Prevention:**
-- Acquire locks in same order
-- Use timeout (tryLock with timeout)
-- Avoid nested locks
-
-**Key takeaway:** Circular dependency. Acquire locks in consistent order.
-
----
-
-### CountDownLatch vs CyclicBarrier vs Semaphore
-**CountDownLatch:**
-- One-time use
-- Main thread waits for N threads to complete
-- `countDown()` decrements, `await()` waits
-
-**CyclicBarrier:**
-- Reusable
-- Threads wait for each other at a barrier point
-- All proceed together after N threads reach barrier
-
-**Semaphore:**
-- Controls access to resource pool
-- `acquire()` gets permit, `release()` returns it
-- Example: Limit concurrent database connections
-
-**Key takeaway:** Latch = wait for completion, Barrier = sync point, Semaphore = resource pool.
-
----
-
-### Atomic Classes
-`AtomicInteger`, `AtomicLong`, `AtomicBoolean`, etc. Provide lock-free thread-safe operations using CAS (Compare-And-Swap).
-
-**Operations:** `get()`, `set()`, `incrementAndGet()`, `compareAndSet()`, etc.
-
-**Advantage:** Better performance than synchronized for simple operations. No blocking.
-
-**Key takeaway:** Lock-free atomicity. Use for counters, flags.
 
 ---
 
 ## Exception Handling
 
-### Exception Hierarchy
-```
-Throwable
-├── Error (unchecked, serious, don't catch)
-│   └── OutOfMemoryError, StackOverflowError
-└── Exception
-    ├── RuntimeException (unchecked)
-    │   └── NullPointerException, ArrayIndexOutOfBoundsException
-    └── Checked Exceptions (must handle)
-        └── IOException, SQLException
-```
-
-**Key takeaway:** Checked = must handle, Unchecked (RuntimeException + Error) = optional.
-
----
-
 ### Checked vs Unchecked Exceptions
-**Checked Exceptions:**
-- Compile-time check
-- Must handle (try-catch or throws)
-- Examples: IOException, SQLException
-- Recoverable conditions
 
-**Unchecked Exceptions (RuntimeException):**
-- No compile-time check
-- Programming errors (bugs)
-- Examples: NullPointerException, ArithmeticException
-- Should fix code, not catch
-
-**Key takeaway:** Checked = recoverable, Unchecked = programming errors.
-
----
-
-### try-catch-finally
 ```java
-try {
-    // Code that may throw exception
-} catch (SpecificException e) {
-    // Handle specific exception
-} catch (Exception e) {
-    // Handle general exception
-} finally {
-    // Always executes (cleanup)
+// UNCHECKED: Programming errors (RuntimeException)
+public class UncheckedExceptionExample {
+    public static void main(String[] args) {
+        String s = null;
+        System.out.println(s.length()); // NullPointerException
+        // Compiler DOESN'T force you to catch this
+        // It's a BUG in your code
+    }
 }
-```
 
-**Multiple catch blocks:** Specific exceptions before general ones.
-
-**finally:** Executes even if return in try/catch (except System.exit()).
-
-**Key takeaway:** Specific exceptions first. finally for cleanup.
-
----
-
-### try-with-resources (Java 7+)
-Auto-closes resources implementing `AutoCloseable` or `Closeable`.
-
-```java
-try (FileReader fr = new FileReader("file.txt");
-     BufferedReader br = new BufferedReader(fr)) {
-    // Use resources
-} // Automatically closed, even if exception
-```
-
-**Advantage:** No explicit finally block. Prevents resource leaks.
-
-**Key takeaway:** Auto-close resources. Cleaner than finally.
-
----
-
-### throw vs throws
-**throw:** Keyword to explicitly throw an exception (in method body).
-```java
-throw new IllegalArgumentException("Invalid input");
-```
-
-**throws:** Declares exceptions a method might throw (in method signature).
-```java
-void readFile() throws IOException { /* ... */ }
-```
-
-**Key takeaway:** throw = throw exception, throws = declare in signature.
-
----
-
-### Custom Exceptions
-Extend `Exception` (checked) or `RuntimeException` (unchecked).
-
-```java
-class InsufficientFundsException extends Exception {
-    public InsufficientFundsException(String message) {
-        super(message);
+// CHECKED: External errors (must handle)
+public class CheckedExceptionExample {
+    public static void main(String[] args) throws IOException {
+        // Compiler FORCES you to handle this
+        FileReader fr = new FileReader("file.txt");
+        // File might not exist (external condition)
+        // You MUST catch or declare throws
     }
 }
 ```
 
-**Use case:** Business logic exceptions (insufficient balance, duplicate user, etc.).
+**Real-world example:**
 
-**Key takeaway:** Meaningful exception names. Extend appropriate class.
+```java
+public class ExceptionHandlingExample {
+    // Method 1: Try-catch
+    public static String readFile1(String filename) {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(filename));
+            return reader.readLine();
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found: " + filename);
+            return null;
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    // Method 2: Try-with-resources (Java 7+) - AUTO CLOSES
+    public static String readFile2(String filename) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            return reader.readLine();
+            // Reader automatically closed here, even if exception occurs
+        }
+    }
+    
+    // Method 3: Declare throws
+    public static String readFile3(String filename) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader(filename));
+        return reader.readLine();
+        // Caller must handle IOException
+    }
+}
+```
+
+---
+
+## Multithreading & Concurrency
+
+### Creating and Running Threads
+
+```java
+// Method 1: Extend Thread class
+public class MyThread extends Thread {
+    private String name;
+    
+    public MyThread(String name) {
+        this.name = name;
+    }
+    
+    @Override
+    public void run() {
+        for (int i = 0; i < 5; i++) {
+            System.out.println(name + " - iteration " + i);
+            try {
+                Thread.sleep(1000); // Sleep 1 second
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+// Method 2: Implement Runnable (PREFERRED)
+public class MyTask implements Runnable {
+    private String name;
+    
+    public MyTask(String name) {
+        this.name = name;
+    }
+    
+    @Override
+    public void run() {
+        for (int i = 0; i < 5; i++) {
+            System.out.println(name + " - iteration " + i);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+// Usage
+public class ThreadExample {
+    public static void main(String[] args) {
+        // Method 1
+        MyThread thread1 = new MyThread("Thread-1");
+        thread1.start();  // NOT run() - that runs synchronously
+        
+        // Method 2
+        Thread thread2 = new Thread(new MyTask("Thread-2"));
+        thread2.start();
+        
+        // Both run concurrently
+    }
+}
+```
+
+**Output:**
+```
+Thread-1 - iteration 0
+Thread-2 - iteration 0
+Thread-1 - iteration 1
+Thread-2 - iteration 1
+(interleaved, not in order)
+```
+
+### Synchronization - Fixing Race Conditions
+
+```java
+// PROBLEM: Race condition
+public class BadCounter {
+    private int count = 0;
+    
+    public void increment() {
+        count++;  // NOT atomic! 3 steps: read, add, write
+    }
+    
+    public int getCount() {
+        return count;
+    }
+}
+
+public class RaceConditionExample {
+    public static void main(String[] args) throws InterruptedException {
+        BadCounter counter = new BadCounter();
+        
+        // Create 2 threads, each increments 10000 times
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 10000; i++) {
+                counter.increment();
+            }
+        });
+        
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 10000; i++) {
+                counter.increment();
+            }
+        });
+        
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        
+        System.out.println("Count: " + counter.getCount());
+        // Expected: 20000
+        // Actual: ~15000-19000 (varies, due to race condition!)
+    }
+}
+```
+
+**Why race condition happens:**
+
+```
+Thread 1          Thread 2          Shared Memory
+─────────────────────────────────────────────────
+              (count = 0)
+Read count 0
+                  Read count 0
+                  Add 1 = 1
+Write 1                            count = 1
+                  Write 1                (only 1, not 2!)
+Add 1 = 1
+Write 1                            count = 1
+```
+
+**SOLUTION 1: Synchronized Method**
+
+```java
+public class GoodCounter1 {
+    private int count = 0;
+    
+    // Only ONE thread can execute this at a time
+    public synchronized void increment() {
+        count++;
+    }
+    
+    public synchronized int getCount() {
+        return count;
+    }
+}
+```
+
+**SOLUTION 2: Synchronized Block (Better granularity)**
+
+```java
+public class GoodCounter2 {
+    private int count = 0;
+    private Object lock = new Object();
+    
+    public void increment() {
+        synchronized(lock) {
+            count++;  // Protected section
+        }
+    }
+    
+    public int getCount() {
+        synchronized(lock) {
+            return count;
+        }
+    }
+}
+```
+
+**SOLUTION 3: AtomicInteger (Best)**
+
+```java
+public class GoodCounter3 {
+    private AtomicInteger count = new AtomicInteger(0);
+    
+    public void increment() {
+        count.incrementAndGet();  // Atomic operation
+    }
+    
+    public int getCount() {
+        return count.get();
+    }
+}
+```
+
+### Producer-Consumer Pattern
+
+```java
+public class ProducerConsumerExample {
+    static class Queue {
+        private LinkedList<Integer> buffer = new LinkedList<>();
+        private static final int CAPACITY = 10;
+        
+        public synchronized void produce(int value) throws InterruptedException {
+            while (buffer.size() == CAPACITY) {
+                wait();  // Wait if buffer is full
+            }
+            buffer.add(value);
+            System.out.println("Produced: " + value + ", buffer size: " + buffer.size());
+            notifyAll();  // Wake up consumers
+        }
+        
+        public synchronized int consume() throws InterruptedException {
+            while (buffer.isEmpty()) {
+                wait();  // Wait if buffer is empty
+            }
+            int value = buffer.removeFirst();
+            System.out.println("Consumed: " + value + ", buffer size: " + buffer.size());
+            notifyAll();  // Wake up producers
+            return value;
+        }
+    }
+    
+    public static void main(String[] args) {
+        Queue queue = new Queue();
+        
+        // Producer thread
+        new Thread(() -> {
+            try {
+                for (int i = 1; i <= 20; i++) {
+                    queue.produce(i);
+                    Thread.sleep(100);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        
+        // Consumer thread
+        new Thread(() -> {
+            try {
+                for (int i = 0; i < 20; i++) {
+                    queue.consume();
+                    Thread.sleep(200);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+}
+```
 
 ---
 
 ## Java 8+ Features
 
-### Lambda Expressions
-Anonymous function for functional interfaces (interface with one abstract method).
-
-**Syntax:** `(parameters) -> expression` or `(parameters) -> { statements }`
+### Lambda Expressions - Concise Code
 
 ```java
-// Before Java 8
-Comparator<String> comp = new Comparator<String>() {
-    public int compare(String s1, String s2) {
-        return s1.length() - s2.length();
+public class LambdaExample {
+    public static void main(String[] args) {
+        // BEFORE Java 8
+        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+        Collections.sort(numbers, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer a, Integer b) {
+                return a - b;
+            }
+        });
+        
+        // AFTER Java 8 - Lambda expression
+        Collections.sort(numbers, (a, b) -> a - b);
+        System.out.println(numbers); // [1, 2, 3, 4, 5]
     }
-};
+}
 
-// Java 8
-Comparator<String> comp = (s1, s2) -> s1.length() - s2.length();
-```
-
-**Key takeaway:** Concise syntax for functional interfaces.
-
----
-
-### Functional Interfaces
-Interface with exactly one abstract method. Can have default/static methods.
-
-**@FunctionalInterface:** Annotation ensures single abstract method (compile-time check).
-
-**Common functional interfaces:**
-- **Predicate<T>:** `boolean test(T t)` - filtering
-- **Consumer<T>:** `void accept(T t)` - forEach
-- **Supplier<T>:** `T get()` - factory
-- **Function<T, R>:** `R apply(T t)` - transformation
-
-**Key takeaway:** Single abstract method. Enables lambdas.
-
----
-
-### Stream API
-Process collections in declarative way. Supports functional-style operations.
-
-**Operations:**
-- **Intermediate (lazy):** filter, map, sorted, distinct (return Stream)
-- **Terminal (eager):** forEach, collect, reduce, count (return result)
-
-```java
-List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-List<Integer> evenSquares = numbers.stream()
-    .filter(n -> n % 2 == 0)
-    .map(n -> n * n)
-    .collect(Collectors.toList());
-```
-
-**Parallel streams:** `parallelStream()` for concurrent processing.
-
-**Key takeaway:** Declarative. Intermediate ops lazy. Terminal ops trigger execution.
-
----
-
-### Optional
-Container object to avoid null checks. Prevents `NullPointerException`.
-
-```java
-Optional<String> opt = Optional.ofNullable(value);
-String result = opt.orElse("default");
-opt.ifPresent(v -> System.out.println(v));
-```
-
-**Methods:** `isPresent()`, `ifPresent()`, `orElse()`, `orElseGet()`, `orElseThrow()`, `map()`, `filter()`
-
-**Key takeaway:** Explicit absence of value. Avoid null checks.
-
----
-
-### Default and Static Methods in Interfaces
-**Default methods (Java 8):**
-- Provide implementation in interface
-- Subclasses can override
-- Backward compatibility (add methods without breaking implementations)
-
-```java
-interface Vehicle {
-    default void start() {
-        System.out.println("Starting...");
+// Real example: Filtering with lambdas
+public class FilteringExample {
+    public static void main(String[] args) {
+        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        
+        // Filter even numbers using lambda
+        List<Integer> evens = numbers.stream()
+            .filter(n -> n % 2 == 0)  // Lambda: n -> n % 2 == 0
+            .collect(Collectors.toList());
+        
+        System.out.println(evens); // [2, 4, 6, 8, 10]
     }
 }
 ```
 
-**Static methods:**
-- Utility methods in interface
-- Called via interface name
+### Streams API - Functional Processing
 
-**Key takeaway:** Default = instance method with body, Static = utility.
-
----
-
-### Method References
-Shorthand for lambdas calling a single method. `ClassName::methodName`
-
-**Types:**
-1. **Static method:** `Math::max` → `(a, b) -> Math.max(a, b)`
-2. **Instance method (object):** `obj::toString` → `() -> obj.toString()`
-3. **Instance method (class):** `String::toUpperCase` → `s -> s.toUpperCase()`
-4. **Constructor:** `ArrayList::new` → `() -> new ArrayList()`
-
-**Key takeaway:** Cleaner than lambdas for single method calls.
-
----
-
-### Date & Time API (java.time)
-Replaces old `Date`, `Calendar` (mutable, not thread-safe).
-
-**Key classes:**
-- **LocalDate:** Date without time (2025-01-15)
-- **LocalTime:** Time without date (14:30:00)
-- **LocalDateTime:** Date + time
-- **ZonedDateTime:** Date + time + timezone
-- **Instant:** Timestamp (machine-readable)
-- **Duration:** Time difference
-- **Period:** Date difference
-
-**Immutable and thread-safe.**
-
-**Key takeaway:** Immutable, thread-safe. Use LocalDate/LocalDateTime for most cases.
-
----
-
-## Memory Management & JVM
-
-### JVM Architecture
-**Components:**
-1. **Class Loader:** Loads .class files into memory
-2. **Runtime Data Areas:**
-   - **Heap:** Objects, instance variables (shared)
-   - **Stack:** Method calls, local variables (per thread)
-   - **Method Area:** Class metadata, static variables (shared)
-   - **PC Register:** Current instruction (per thread)
-   - **Native Method Stack:** Native method calls
-3. **Execution Engine:**
-   - **Interpreter:** Executes bytecode line by line
-   - **JIT Compiler:** Compiles frequently used bytecode to native code
-   - **Garbage Collector:** Reclaims unused memory
-
-**Key takeaway:** Class Loader → Memory → Execution Engine.
-
----
-
-### Heap vs Stack Memory
-**Stack:**
-- Stores method calls, local variables, references
-- LIFO (Last In First Out)
-- Thread-specific (each thread has own stack)
-- Fast access
-- Limited size (StackOverflowError if exceeded)
-- Automatically cleared when method returns
-
-**Heap:**
-- Stores objects, instance variables
-- Shared across threads
-- Slower access (complex management)
-- Larger size
-- Garbage collected
-
-**Key takeaway:** Stack = method calls/local vars, Heap = objects.
-
----
-
-### Garbage Collection
-Automatic memory management. Reclaims memory from unreachable objects.
-
-**How it works:**
-1. **Mark:** Identify reachable objects (starting from GC roots)
-2. **Sweep:** Remove unreachable objects
-3. **Compact:** Reduce fragmentation (optional)
-
-**GC Roots:** Local variables, static variables, active threads, JNI references.
-
-**Generations:**
-- **Young Generation:** New objects. Frequent minor GCs (fast).
-- **Old Generation:** Long-lived objects. Infrequent major GCs (slow).
-- **Permanent/Metaspace:** Class metadata.
-
-**GC Types:** Serial, Parallel, CMS, G1 (default in Java 9+), ZGC, Shenandoah.
-
-**Key takeaway:** Automatic. Generational. Mark-Sweep-Compact.
-
----
-
-### OutOfMemoryError
-**Causes:**
-1. **Heap space:** Too many objects, memory leak
-2. **Metaspace:** Too many classes loaded
-3. **Unable to create native thread:** Too many threads
-4. **Direct buffer memory:** NIO buffers exhausted
-
-**Solutions:**
-- Increase heap size: `-Xmx4g`
-- Fix memory leaks (analyze heap dumps)
-- Tune GC settings
-- Reduce object creation
-
-**Key takeaway:** Insufficient memory. Analyze heap dumps. Tune or fix leaks.
-
----
-
-### Memory Leaks in Java
-Objects no longer needed but still referenced (not garbage collected).
-
-**Common causes:**
-1. Unclosed resources (files, connections)
-2. Static collections growing indefinitely
-3. Event listeners not deregistered
-4. ThreadLocal not cleared
-5. Inner class references (holding outer class reference)
-
-**Detection:** Heap dump analysis (VisualVM, Eclipse MAT).
-
-**Key takeaway:** Unreachable but referenced. Use try-with-resources, clear references.
-
----
-
-### Strong, Soft, Weak, Phantom References
-**Strong Reference (default):**
 ```java
-Object obj = new Object(); // Not GC'd while reachable
+public class StreamExample {
+    static class Student {
+        String name;
+        int score;
+        
+        Student(String name, int score) {
+            this.name = name;
+            this.score = score;
+        }
+    }
+    
+    public static void main(String[] args) {
+        List<Student> students = Arrays.asList(
+            new Student("Alice", 85),
+            new Student("Bob", 92),
+            new Student("Charlie", 78),
+            new Student("David", 88)
+        );
+        
+        // Filter, Map, Sort, Collect
+        List<String> highScorers = students.stream()
+            .filter(s -> s.score >= 80)           // Keep scores >= 80
+            .sorted((a, b) -> b.score - a.score)  // Sort descending
+            .map(s -> s.name)                     // Extract names
+            .collect(Collectors.toList());        // Collect to list
+        
+        System.out.println(highScorers);
+        // Output: [Bob, Alice, David]
+        
+        // More examples
+        double averageScore = students.stream()
+            .mapToInt(s -> s.score)
+            .average()
+            .orElse(0);
+        System.out.println("Average: " + averageScore); // 85.75
+        
+        // Count
+        long count = students.stream()
+            .filter(s -> s.score >= 80)
+            .count();
+        System.out.println("High scorers: " + count); // 3
+    }
+}
 ```
 
-**Soft Reference:** GC'd when memory is low. Use for caches.
+---
 
-**Weak Reference:** GC'd in next collection cycle. Use for WeakHashMap.
+## Memory Management & GC
 
-**Phantom Reference:** Object already finalized but not yet reclaimed. Use for cleanup tracking.
+### Understanding Garbage Collection
 
-**Key takeaway:** Strong = normal, Soft = cache, Weak = WeakHashMap, Phantom = cleanup.
+```java
+public class GarbageCollectionExample {
+    static class DataObject {
+        byte[] data = new byte[10 * 1024]; // 10KB
+        
+        @Override
+        protected void finalize() {
+            System.out.println("DataObject garbage collected");
+        }
+    }
+    
+    public static void main(String[] args) {
+        // Objects created in loop
+        for (int i = 0; i < 1000; i++) {
+            DataObject obj = new DataObject();
+            // obj goes out of scope and becomes eligible for GC
+        }
+        
+        System.out.println("Objects created");
+        System.gc();  // Suggest garbage collection (not guaranteed)
+        
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+// Output:
+// Objects created
+// DataObject garbage collected
+// (repeated multiple times)
+```
+
+### Memory Leaks - Common Examples
+
+```java
+// MEMORY LEAK 1: Not closing resources
+public class MemoryLeakExample1 {
+    public static void readFile(String filename) throws IOException {
+        FileReader fr = new FileReader(filename);
+        BufferedReader br = new BufferedReader(fr);
+        String line = br.readLine();
+        System.out.println(line);
+        // LEAK: Never closed! File handle held
+    }
+    
+    // FIXED: Use try-with-resources
+    public static void readFileFixed(String filename) throws IOException {
+        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+            String line = br.readLine();
+            System.out.println(line);
+        } // Auto-closed here
+    }
+}
+
+// MEMORY LEAK 2: Static collection growing
+public class MemoryLeakExample2 {
+    static List<Object> cache = new ArrayList<>();  // Static = never GC'd
+    
+    public void cacheObject(Object obj) {
+        cache.add(obj);  // Keeps growing!
+        // If called 1000 times, all 1000 objects stay in memory
+    }
+}
+
+// MEMORY LEAK 3: Not removing listeners
+public class MemoryLeakExample3 {
+    static List<EventListener> listeners = new ArrayList<>();
+    
+    public void registerListener(EventListener listener) {
+        listeners.add(listener);
+    }
+    
+    // PROBLEM: No unregisterListener method!
+    // Listener stays in memory even after GUI component is deleted
+}
+```
 
 ---
 
 ## Design Patterns
 
-### Singleton Pattern
-Ensures only one instance of a class exists.
+### Singleton Pattern - Ensuring Single Instance
 
-**Eager initialization:**
 ```java
-class Singleton {
-    private static final Singleton INSTANCE = new Singleton();
-    private Singleton() {}
-    public static Singleton getInstance() { return INSTANCE; }
+// WRONG: Not thread-safe
+public class SingletonWrong {
+    private static SingletonWrong instance;
+    
+    private SingletonWrong() {}
+    
+    public static SingletonWrong getInstance() {
+        if (instance == null) {  // NOT THREAD-SAFE!
+            instance = new SingletonWrong();
+        }
+        return instance;
+    }
 }
-```
 
-**Lazy initialization (thread-safe):**
-```java
-class Singleton {
-    private static volatile Singleton instance;
-    private Singleton() {}
-    public static Singleton getInstance() {
+// Why it's wrong: Two threads can enter if block simultaneously
+// Thread 1: if (instance == null) ← true
+// Thread 2: if (instance == null) ← true (checked before T1 created)
+// Both create instances!
+
+// CORRECT: Thread-safe
+public class SingletonCorrect {
+    private static volatile SingletonCorrect instance;
+    
+    private SingletonCorrect() {}
+    
+    public static SingletonCorrect getInstance() {
         if (instance == null) {
-            synchronized (Singleton.class) {
+            synchronized(SingletonCorrect.class) {
                 if (instance == null) {
-                    instance = new Singleton();
+                    instance = new SingletonCorrect();
                 }
             }
         }
         return instance;
     }
 }
+
+// BEST: Using Enum (thread-safe, serialization-safe)
+public enum SingletonEnum {
+    INSTANCE;
+    
+    public void doSomething() {
+        System.out.println("Doing something");
+    }
+}
+
+// Usage
+SingletonEnum.INSTANCE.doSomething();
 ```
 
-**Best:** Use enum (thread-safe, serialization-safe).
-
-**Key takeaway:** Single instance. Double-checked locking or enum.
-
----
-
-### Factory Pattern
-Creates objects without specifying exact class. Defines interface for creation, subclasses decide which class to instantiate.
+### Factory Pattern - Flexible Object Creation
 
 ```java
-interface Shape { void draw(); }
-class Circle implements Shape { public void draw() { } }
-class Square implements Shape { public void draw() { } }
-
-class ShapeFactory {
-    public Shape getShape(String type) {
-        if (type.equals("CIRCLE")) return new Circle();
-        if (type.equals("SQUARE")) return new Square();
-        return null;
+public class FactoryPatternExample {
+    // Database connection factory
+    interface Database {
+        void connect();
+    }
+    
+    static class MySQLDatabase implements Database {
+        @Override
+        public void connect() {
+            System.out.println("Connected to MySQL");
+        }
+    }
+    
+    static class PostgresDatabase implements Database {
+        @Override
+        public void connect() {
+            System.out.println("Connected to PostgreSQL");
+        }
+    }
+    
+    // Factory
+    static class DatabaseFactory {
+        public static Database getDatabase(String type) {
+            switch(type) {
+                case "mysql":
+                    return new MySQLDatabase();
+                case "postgres":
+                    return new PostgresDatabase();
+                default:
+                    throw new IllegalArgumentException("Unknown DB: " + type);
+            }
+        }
+    }
+    
+    // Usage
+    public static void main(String[] args) {
+        // No need to know which class to instantiate
+        Database db = DatabaseFactory.getDatabase("mysql");
+        db.connect();
+        
+        db = DatabaseFactory.getDatabase("postgres");
+        db.connect();
     }
 }
 ```
 
-**Use case:** Object creation logic complex or varies by condition.
-
-**Key takeaway:** Encapsulates object creation. Decouples client from concrete classes.
-
 ---
 
-### Builder Pattern
-Constructs complex objects step by step. Separates construction from representation.
+## Interview Tips & Common Mistakes
+
+### 1. String Immutability
 
 ```java
-class User {
-    private String name;
-    private int age;
-
-    private User(Builder builder) {
-        this.name = builder.name;
-        this.age = builder.age;
-    }
-
-    static class Builder {
-        private String name;
-        private int age;
-
-        Builder setName(String name) { this.name = name; return this; }
-        Builder setAge(int age) { this.age = age; return this; }
-        User build() { return new User(this); }
-    }
-}
-
-User user = new User.Builder().setName("John").setAge(30).build();
+// MISTAKE: Thinking string is modified
+String s = "Hello";
+s = s + " World";  // Creates NEW String, s still refers to "Hello World"
+// OLD "Hello" object is garbage collected (unreferenced)
 ```
 
-**Use case:** Many optional parameters, immutable objects.
-
-**Key takeaway:** Step-by-step construction. Fluent API.
-
----
-
-### Observer Pattern
-One-to-many dependency. When one object changes state, all dependents notified.
-
-**Example:** Event listeners, MVC (Model notifies View).
-
-**Java support:** `Observable` class (deprecated), use custom implementation or libraries.
-
-**Key takeaway:** Subject notifies observers. Loose coupling.
-
----
-
-### Strategy Pattern
-Defines family of algorithms, encapsulates each, makes them interchangeable.
+### 2. Pass-by-Value Misunderstanding
 
 ```java
-interface PaymentStrategy {
-    void pay(int amount);
-}
-class CreditCard implements PaymentStrategy { /* ... */ }
-class PayPal implements PaymentStrategy { /* ... */ }
-
-class ShoppingCart {
-    private PaymentStrategy paymentStrategy;
-    void setPaymentStrategy(PaymentStrategy strategy) {
-        this.paymentStrategy = strategy;
+public class PassByValueExample {
+    public static void main(String[] args) {
+        int x = 5;
+        modify(x);
+        System.out.println(x);  // Still 5! (primitives pass value copy)
+        
+        List<String> list = new ArrayList<>();
+        list.add("Hello");
+        modify(list);
+        System.out.println(list);  // ["Hello", "World"] (references pass reference)
     }
-    void checkout(int amount) {
-        paymentStrategy.pay(amount);
+    
+    static void modify(int x) {
+        x = 10;  // Changes local copy only
+    }
+    
+    static void modify(List<String> list) {
+        list.add("World");  // Modifies actual list
     }
 }
 ```
 
-**Use case:** Multiple algorithms/behaviors, selected at runtime.
+### 3. == vs equals()
 
-**Key takeaway:** Encapsulate algorithms. Select at runtime.
+```java
+String s1 = "Hello";
+String s2 = "Hello";
+String s3 = new String("Hello");
 
----
+s1 == s2   // true (same string pool reference)
+s1 == s3   // false (different objects)
+s1.equals(s3) // true (same content)
+```
 
-## Interview Tips
-
-1. **Explain internals:** "HashMap uses array + linked list. hashCode() determines bucket, equals() for key match."
-2. **Discuss tradeoffs:** "ArrayList fast for access, LinkedList for insertions."
-3. **Real-world examples:** "Used ConcurrentHashMap for thread-safe cache in production."
-4. **Know when to use:** "TreeSet for sorted unique elements, HashSet for fast lookups."
-5. **Version awareness:** "Java 8 introduced Streams and Lambdas. Java 11 is LTS."
-
----
-
-**Updated:** 2026-06-28 | **Level:** Intermediate-Advanced | **Format:** Interview-ready definitions
+**Last Updated:** 2026-08-23 | **Level:** Comprehensive for Interviews | **Format:** Detailed with Examples

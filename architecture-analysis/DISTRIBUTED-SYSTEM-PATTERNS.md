@@ -13,6 +13,7 @@
 6. [PubSub Pattern](#pubsub-pattern)
 7. [Consistent Hashing](#consistent-hashing)
 8. [Sharding](#sharding)
+9. [Replication Pattern](#replication-pattern)
 
 ---
 
@@ -1645,6 +1646,615 @@ Resharding:
   Mitigation:
     └─ Design for flexibility from start
        (Use consistent hashing or directory-based)
+```
+
+---
+
+## Replication Pattern
+
+### Definition
+Replication is the process of copying data across multiple nodes to ensure availability, durability, and fault tolerance. When one node fails, the data remains accessible on replica nodes, preventing data loss and service interruption.
+
+### Problem It Solves
+
+```
+Single Node Database (No Replication):
+
+┌──────────────┐
+│  Database    │
+│  All data    │
+└──────────────┘
+       ↓
+   Hardware fails
+       ↓
+   Data LOST!
+   Service DOWN!
+
+Problems:
+  ├─ Data loss (crash → no backup)
+  ├─ Service downtime (can't serve requests)
+  ├─ No redundancy (single point of failure)
+  ├─ No load distribution (all queries to one node)
+  └─ Recovery time long
+```
+
+### Replication Strategies
+
+#### 1. Master-Slave (Primary-Replica) Replication
+
+```
+Architecture:
+
+  ┌──────────────────┐
+  │     MASTER       │
+  │   (Primary)      │
+  │                  │
+  │  Accepts ALL     │
+  │  reads & writes  │
+  └────────┬─────────┘
+           │
+      ┌────┴────┬──────────┐
+      │          │          │
+      ↓          ↓          ↓
+   SLAVE 1    SLAVE 2    SLAVE 3
+  (Replica)  (Replica)  (Replica)
+   
+   Read-only   Read-only   Read-only
+   
+   ├─ Replicate from Master
+   └─ Eventually consistent
+```
+
+**Write Flow:**
+```
+Client writes data
+       ↓
+   MASTER
+   ├─ Accepts write
+   ├─ Applies locally
+   ├─ Returns ACK to client
+   └─ Sends replication log to slaves
+       ↓
+   SLAVE 1, SLAVE 2, SLAVE 3
+   ├─ Receive changes
+   ├─ Apply locally
+   ├─ Send ACK (may or may not)
+   └─ Eventually consistent
+```
+
+**Read Flow:**
+```
+Client reads data
+       ↓
+   Option 1: Read from MASTER
+   ├─ Always consistent
+   ├─ Single node bottleneck
+   └─ Higher latency (network to primary)
+   
+   Option 2: Read from SLAVE
+   ├─ Potentially stale (lag in replication)
+   ├─ Distributed load
+   └─ Lower latency
+   
+   Option 3: Read from ANY
+   ├─ Load balanced
+   ├─ Risk of inconsistent reads
+   └─ Best performance
+```
+
+**Advantages:**
+```
+✓ Simple to understand
+✓ Easy to implement
+✓ Backup created automatically
+✓ Read scaling (slaves handle reads)
+✓ No distributed writes
+```
+
+**Disadvantages:**
+```
+✗ Replication lag (slaves lag behind master)
+✗ Stale reads possible (read from slave)
+✗ Master failure: Manual failover (slave promotion)
+✗ Single point of write (master only)
+✗ Slaves can't handle writes during failover
+```
+
+#### 2. Multi-Master (Peer-to-Peer) Replication
+
+```
+Architecture:
+
+   ┌────────────┐    ┌────────────┐    ┌────────────┐
+   │  SERVER A  │    │  SERVER B  │    │  SERVER C  │
+   │  (Master)  │◄──→│  (Master)  │◄──→│  (Master)  │
+   │            │    │            │    │            │
+   │ Can write  │    │ Can write  │    │ Can write  │
+   └────────────┘    └────────────┘    └────────────┘
+        ↓                  ↓                 ↓
+    Replicates         Replicates       Replicates
+    to B & C           to A & C         to A & B
+```
+
+**Write Flow:**
+```
+Client writes to SERVER A
+       ↓
+SERVER A
+├─ Accepts write
+├─ Applies locally
+├─ Returns ACK
+└─ Sends to B and C
+       ↓
+SERVER B & C
+├─ Receive changes
+├─ Apply locally
+└─ Send to others (if not already seen)
+
+Problem: Concurrent Writes!
+  
+  Client 1: Write "Value=10" to A
+  Client 2: Write "Value=20" to B
+  
+  Both submitted at same time
+    ↓
+  A has: Value=10
+  B has: Value=20
+    ↓
+  Conflict! Which is correct?
+```
+
+**Conflict Resolution:**
+```
+Strategy 1: Last-Write-Wins
+  ├─ Timestamp on each write
+  ├─ Later write wins
+  ├─ Simple but data loss possible
+  └─ Example: Value=20 wins (written at 10:00:01 vs 10:00:00)
+
+Strategy 2: Version Vectors
+  ├─ Track causality
+  ├─ Detect concurrent writes
+  ├─ Mark as conflict
+  └─ Application decides merge
+
+Strategy 3: Custom Application Logic
+  ├─ Database stores both versions
+  ├─ Application merges
+  ├─ Example: Shopping cart, merge items
+  └─ Maximum flexibility
+
+Strategy 4: Voting/Quorum
+  ├─ Majority decides correct value
+  ├─ Requires consensus
+  └─ Handles network partitions
+```
+
+**Advantages:**
+```
+✓ No single point of failure (all are masters)
+✓ Write availability (write to any node)
+✓ Better read/write distribution
+✓ Automatic failover (any node can take over)
+```
+
+**Disadvantages:**
+```
+✗ Complex (conflict resolution needed)
+✗ Network partition issues (split-brain)
+✗ Consistency harder to guarantee
+✗ Operational complexity
+```
+
+#### 3. Leaderless Replication
+
+```
+Architecture:
+
+   ┌────────┐    ┌────────┐    ┌────────┐
+   │ Node 1 │    │ Node 2 │    │ Node 3 │
+   │        │◄──→│        │◄──→│        │
+   │ Peer   │    │ Peer   │    │ Peer   │
+   └────────┘    └────────┘    └────────┘
+   
+All nodes equal
+No master/slaves
+Everyone replicates to everyone
+```
+
+**Write Flow (Quorum Write):**
+```
+Client writes to any node
+       ↓
+Write to Node 1, Node 2, Node 3
+  ├─ Node 1: ACK (written)
+  ├─ Node 2: ACK (written)
+  ├─ Node 3: ? (timeout/offline)
+       ↓
+Quorum met (2 out of 3)
+Return success to client
+       ↓
+Node 3 eventually catches up
+(eventual consistency)
+```
+
+**Read Flow (Quorum Read):**
+```
+Client reads from any node
+       ↓
+Read from Node 1, Node 2, Node 3
+  ├─ Node 1: "Value=10" (version=5)
+  ├─ Node 2: "Value=10" (version=5)
+  ├─ Node 3: "Value=15" (version=3, stale)
+       ↓
+Majority voted (2 votes for Value=10)
+Return Value=10
+       ↓
+Repair Node 3:
+  └─ Write correct value (version=5)
+  └─ "Read repair" process
+```
+
+**Advantages:**
+```
+✓ No single point of failure
+✓ High availability
+✓ Write to any node
+✓ Read from any node
+✓ Automatic peer repair
+```
+
+**Disadvantages:**
+```
+✗ Quorum overhead (contact multiple nodes)
+✗ Complexity (version vectors, conflict resolution)
+✗ Network partition issues
+✗ Slower writes (wait for quorum)
+```
+
+### Replication Modes
+
+#### Synchronous Replication
+
+```
+Master writes
+  ├─ Apply locally
+  ├─ Send to ALL slaves
+  ├─ Wait for ACK from ALL slaves
+  ├─ Return success to client
+  │
+  └─ Slave fails?
+     └─ ENTIRE WRITE BLOCKED!
+
+Timeline:
+  T=0:00   Write request received
+  T=0:01   Applied locally (master)
+  T=0:02   Sent to Slave 1, 2, 3
+  T=0:03   ACK from Slave 1 ✓
+  T=0:04   ACK from Slave 2 ✓
+  T=0:50   Slave 3 timeout ✗
+  T=1:00   WRITE FAILS
+  
+  Impact: Slave 3 down → entire system unavailable!
+
+Pros:
+  ✓ Strong consistency
+  ✓ All data replicated before returning
+
+Cons:
+  ✗ Availability suffers (slave failure blocks)
+  ✗ Latency high (wait for all)
+  ✗ Not practical for many replicas
+```
+
+#### Asynchronous Replication
+
+```
+Master writes
+  ├─ Apply locally
+  ├─ Return success to client (immediately!)
+  │
+  └─ Send to slaves in background
+     ├─ Slave 1: Eventually receives ✓
+     ├─ Slave 2: Eventually receives ✓
+     └─ Slave 3: May or may not receive
+
+Timeline:
+  T=0:00   Write request received
+  T=0:01   Applied locally (master)
+  T=0:02   Return success to client ✓
+  T=0:03   Background replication sent
+  T=0:10   Slave 1 receives & applies
+  T=0:15   Slave 2 receives & applies
+  T=0:20   Slave 3 receives & applies
+
+Pros:
+  ✓ High availability
+  ✓ Low latency (don't wait for replicas)
+  ✓ Tolerates slave failures
+
+Cons:
+  ✗ Eventual consistency (lag between master/slaves)
+  ✗ Stale reads possible (slave lag)
+  ✗ Data loss risk (master crashes before replication)
+```
+
+#### Semi-Synchronous Replication
+
+```
+Master writes
+  ├─ Apply locally
+  ├─ Send to slaves
+  ├─ Wait for ACK from SOME slaves (not all)
+  ├─ Return success to client
+  │
+  └─ Continue replicating to others in background
+
+Example: Wait for 1 out of 3 slaves
+
+Timeline:
+  T=0:00   Write request received
+  T=0:01   Applied locally (master)
+  T=0:02   Sent to Slave 1, 2, 3
+  T=0:03   ACK from Slave 1 ✓
+  T=0:04   Return success (don't wait for 2, 3)
+           Background replication continues
+  T=0:10   Slave 2 receives ✓
+  T=0:20   Slave 3 receives ✓
+
+Pros:
+  ✓ Balanced consistency/availability
+  ✓ Fast writes (don't wait for all)
+  ✓ Some redundancy (multiple replicas ACK)
+
+Cons:
+  ✗ Some slaves may lag
+  ✗ Stale reads from lagged slaves
+  ✗ Complexity in configuration
+```
+
+### Replica Lag Issues
+
+```
+Problem: Master writes faster than slaves replicate
+
+Timeline of Issues:
+
+T=0:00   Client writes to Master: "Count = 0 → 1"
+T=0:01   Master applies change ✓
+T=0:02   Slave 1 receives ✓ (Count=1)
+T=0:03   Client reads from Slave 1: Count=1 ✓ (consistent)
+
+But with lag:
+
+T=0:00   Client 1 writes to Master: "Count = 0 → 1"
+T=0:01   Master applies change (Count=1) ✓
+T=0:02   Client 2 reads from Slave 1: Count=0 ✗ (STALE!)
+T=0:10   Slave 1 receives update (Count=1)
+T=0:11   Client 2 reads again from Slave 1: Count=1 ✓
+
+Problem: Read-after-write inconsistency!
+```
+
+**Solutions for Replica Lag:**
+
+```
+Solution 1: Read-After-Write Consistency
+  ├─ Client read-after-write: Use MASTER
+  ├─ Previous reads: Use slave (OK to be stale)
+  └─ Example: Write profile → Read from master; View feed → Read from slave
+
+Solution 2: Monotonic Reads
+  ├─ Client always reads from same replica
+  ├─ Prevents: Value going 1 → 0 → 1 (backward moves)
+  └─ Example: Read from "Slave 1" only
+
+Solution 3: Consistent Prefix Reads
+  ├─ Reads respect causality
+  ├─ Don't see effect before cause
+  └─ Example: See reply before question
+
+Solution 4: Wait for Synchronous Write
+  ├─ Write to master: Wait for N replicas to ACK
+  ├─ Reduces lag chance
+  ├─ Trade-off: Higher write latency
+  └─ Example: Semi-synchronous replication
+```
+
+### Replication Topologies
+
+#### Linear Topology (Chain Replication)
+
+```
+Master → Slave1 → Slave2 → Slave3
+
+Write Path:
+  Client writes to Master
+       ↓
+  Master writes to Slave1
+       ↓
+  Slave1 writes to Slave2
+       ↓
+  Slave2 writes to Slave3
+
+Read Path:
+  Option 1: Read from Master (most consistent)
+  Option 2: Read from Slave3 (latest replica, slight lag)
+
+Advantages:
+  ✓ Simple topology
+  ✓ Clear replication path
+  ✓ Easy to understand
+
+Disadvantages:
+  ✗ Replication lag increases (serial replication)
+  ✗ Chain breaks at any point
+  └─ If Slave1 fails → Slave2, 3 don't get updates
+```
+
+#### Star Topology (Hub-and-Spoke)
+
+```
+          Master
+         /  |  \
+        /   |   \
+    Slave1 Slave2 Slave3
+
+Write Path:
+  Client writes to Master
+       ↓
+  Master writes to ALL slaves in parallel
+
+Read Path:
+  Read from any slave (load balanced)
+
+Advantages:
+  ✓ Parallel replication (faster lag reduction)
+  ✓ Any slave failure doesn't block others
+  ✓ Scalable (add slaves without affecting chain)
+
+Disadvantages:
+  ✗ Master is bottleneck (must replicate to all)
+  ✗ Master failure: Manual intervention needed
+```
+
+#### Mesh Topology (Multi-Master)
+
+```
+  Master1 ←→ Master2
+    ↓ ↘  ↙ ↓
+  Slave  Slave
+
+All masters replicate to all others (peer-to-peer)
+
+Advantages:
+  ✓ Highly available (no single point of failure)
+  ✓ Write anywhere
+  ✓ Automatic failover
+
+Disadvantages:
+  ✗ Complex conflict resolution
+  ✗ Replication cycles possible
+  ✗ Consistency harder to maintain
+```
+
+### Failure Scenarios
+
+```
+Scenario 1: Slave Failure (Star Topology)
+
+Before:
+  Master replicated to: Slave1, Slave2, Slave3
+
+Slave2 crashes
+  ├─ Master continues working
+  ├─ Slave1 still getting updates
+  ├─ Slave3 still getting updates
+  ├─ Slave2 re-joins later
+  └─ Catches up from Master (replay replication log)
+  
+  Impact: Minimal (no downtime)
+
+Scenario 2: Master Failure (Star Topology)
+
+Before:
+  Master (has latest data)
+  Replicated to: Slave1, Slave2, Slave3
+
+Master crashes
+  ├─ All slaves stop receiving updates
+  ├─ Determine which slave is most up-to-date
+  ├─ Promote one slave to Master
+  ├─ Other slaves replicate from new Master
+  └─ Recovery time: Minutes (manual decision + promotion)
+  
+  Challenges:
+    ├─ How to decide which slave to promote?
+    ├─ Unreplicated data on old master lost
+    ├─ Clients need to know new master address
+    └─ Inconsistency if old master comes back
+
+Scenario 3: Network Partition
+
+Before:
+  Master ← Network → Slave1, Slave2, Slave3
+
+Network splits:
+  Side A: Master (isolated)
+  Side B: Slave1, Slave2, Slave3 (grouped)
+
+Action A (Master side):
+  ├─ Can't reach any slave
+  ├─ Stop accepting writes (prevent data loss)
+  └─ Risk data loss if crashes
+
+Action B (Slave side):
+  ├─ Can't reach master
+  ├─ Promote new leader from slaves
+  ├─ Accept writes to new leader
+  └─ Reconcile when partition heals
+
+Problem: Split-brain!
+  ├─ Both sides might accept writes
+  └─ Conflict when they rejoin
+  
+Solution:
+  ├─ Quorum approach (need majority)
+  ├─ Master needs > N/2 slaves to see
+  └─ Prevents both sides from becoming master
+```
+
+### Replication for Disaster Recovery
+
+```
+Local Replication (same datacenter):
+  ├─ Fast replication (low latency)
+  ├─ Protects from hardware failure
+  ├─ Doesn't protect from datacenter failure
+  └─ Example: 3 replicas same datacenter
+
+Geographic Replication (multiple datacenters):
+  ├─ Replicate to different regions
+  ├─ Protects from datacenter destruction
+  ├─ Higher latency (cross-region)
+  ├─ Eventual consistency (lag high)
+  └─ Example: Master in US, Replica in EU, Replica in APAC
+
+Replication Strategy:
+  T=0:00   Write to Primary (US)
+  T=0:01   Write applied ✓
+  T=0:02   Return ACK to client
+  T=0:50   Replication to EU (50ms latency)
+  T=1:00   Replication to APAC (100ms latency)
+  
+  If US datacenter destroyed:
+    ├─ EU or APAC becomes primary
+    ├─ Some very recent writes lost (last 1-50ms)
+    └─ But system continues (disaster recovery success)
+```
+
+### When to Use Each Replication Type
+
+```
+Master-Slave:
+  ✓ Simple architecture needed
+  ✓ Read-heavy workloads
+  ✓ Acceptable stale reads
+  ✗ Manual failover acceptable
+  └─ Example: Blog with many readers, few writers
+
+Multi-Master:
+  ✓ Write availability critical
+  ✓ Geographic distribution needed
+  ✓ Can handle conflict resolution complexity
+  ✗ Eventual consistency acceptable
+  └─ Example: Mobile apps (offline sync)
+
+Leaderless:
+  ✓ High availability critical
+  ✓ Automated recovery needed
+  ✓ No single point of failure acceptable complexity
+  └─ Example: Cassandra, DynamoDB (large scale)
 ```
 
 ---

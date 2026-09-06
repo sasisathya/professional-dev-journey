@@ -2,7 +2,6 @@
   "permissions": {
     "allow": [
       "Bash(python3 -m json.tool)",
-      "Bash(JIRA_DOMAIN=\"https://engjira.int.kronos.com\" JIRA_TOKEN=\"MzIzMTgyMjk2MDc3OqXpGfZ1/8MAqEFMZyr5zj7+D0Vs\")",
       "Bash(curl:*)",
       "WebFetch(domain:lucid.app)",
       "Bash(git config:*)",
@@ -36,7 +35,20 @@
       "WebSearch",
       "Bash(mkdir:*)",
       "Bash(git init:*)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "WebFetch(domain:codesignal.com)",
+      "WebFetch(domain:www.teamblind.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:code.imranpollob.com)",
+      "WebFetch(domain:support.codesignal.com)",
+      "Bash(grep -E \"\\\\.md$\")",
+      "Bash(awk '/## Production Wisdom/,0' Nodejs.md)",
+      "Bash(grep -n \"^#\\\\{1,4\\\\} \\\\|Production War\\\\|War Stor\\\\|Symptom\\\\|Junior vs Senior\" /Users/sajja.krishna/sasi/professional-dev-journey/theory/React.md)",
+      "Bash(awk 'NF==0{e++} END{print \"blank lines:\", e}' Redis.md)",
+      "Bash(awk 'NF==0{b++} END{print \"blank lines:\", b}' DSA.md)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:api.github.com)"
     ],
     "deny": [],
     "ask": []

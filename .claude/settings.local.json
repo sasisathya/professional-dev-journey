@@ -48,7 +48,9 @@
       "Bash(awk 'NF==0{b++} END{print \"blank lines:\", b}' DSA.md)",
       "Bash(cat)",
       "Read(//tmp/**)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Skill(claude-api)",
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')"
     ],
     "deny": [],
     "ask": []

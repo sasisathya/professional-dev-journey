@@ -50,7 +50,11 @@
       "Read(//tmp/**)",
       "WebFetch(domain:api.github.com)",
       "Skill(claude-api)",
-      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')"
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')",
+      "Bash(mv /Users/sajja.krishna/sasi/professional-dev-journey/theory/dsa/classes/*.java /Users/sajja.krishna/sasi/professional-dev-journey/theory/dsa/java/)",
+      "Bash(mv /Users/sajja.krishna/sasi/professional-dev-journey/theory/dsa/classes/*.md /Users/sajja.krishna/sasi/professional-dev-journey/theory/dsa/java/)",
+      "Bash(mv /Users/sajja.krishna/sasi/professional-dev-journey/theory/dsa/classes/*.txt /Users/sajja.krishna/sasi/professional-dev-journey/theory/dsa/java/)",
+      "Bash(awk -F: '{sum+=$NF} END {print \"Total lines:\", sum}')"
     ],
     "deny": [],
     "ask": []

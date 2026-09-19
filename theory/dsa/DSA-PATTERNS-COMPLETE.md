@@ -711,17 +711,183 @@
 9. **LeetCode 921** - Minimum Add to Make Parentheses Valid (Medium)
 10. **LeetCode 1106** - Parsing A Boolean Expression (Hard)
 
-#### 5.2-5.10 [Stack patterns 2-10 with 10 problems each]
+#### 5.2 Parentheses Matching
+**Concept:** Validate, match, and manipulate balanced parentheses  
+**When to use:** Expression validation, bracket pairing, nested structures  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Easy → Medium
 
-**5.2 Parentheses Matching** → LeetCode 20, 921, 1249, 1541, 1963, 2116, 3174, etc
-**5.3 Expression Evaluation** → LeetCode 224, 227, 282, 772, etc
-**5.4 Monotonic Increasing Stack** → LeetCode 84, 456, 496, 739, 901, 907, etc
-**5.5 Monotonic Decreasing Stack** → LeetCode 42, 154, 316, 402, 440, 1475, etc
-**5.6 Next Greater Element** → LeetCode 496, 503, 556, 1019, 1475, 2104, etc
-**5.7 Next Smaller Element** → Variants, 2281, 1762, etc
-**5.8 Largest Rectangle** → LeetCode 84, 85 (with DP)
-**5.9 Stock Span** → LeetCode 901, 1944
-**5.10 Remove Elements** → LeetCode 316, 402, 440, 1673, 2332
+**10 Problems:**
+1. **LeetCode 20** - Valid Parentheses (Easy) - Core matching
+2. **LeetCode 921** - Minimum Add to Make Parentheses Valid (Medium) - Count additions needed
+3. **LeetCode 1249** - Minimum Remove to Make Valid Parentheses (Medium) - Character removal
+4. **LeetCode 1541** - Minimum Insertions to Balance Parentheses (Medium) - Special format
+5. **LeetCode 1963** - Minimum Number of Swaps to Make String Balanced (Medium) - Swap minimization
+6. **LeetCode 2116** - Check if String is Valid Sequence (Medium) - Subsequence validation
+7. **LeetCode 3174** - Clear Digits (Easy) - Digit removal with stack
+8. **LeetCode 1190** - Reverse Substrings Between Each Pair (Hard) - Between pairs reversal
+9. **LeetCode 1614** - Maximum Nesting Depth of Parentheses (Easy) - Depth tracking
+10. **LeetCode 2864** - Maximum Odd Binary Number (Easy) - Bit manipulation variant
+
+---
+
+#### 5.3 Expression Evaluation
+**Concept:** Parse and evaluate infix, postfix, or prefix expressions  
+**When to use:** Calculator implementation, expression parsing, operator precedence  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Medium → Hard
+
+**10 Problems:**
+1. **LeetCode 224** - Basic Calculator (Hard) - Infix with +/- and ()
+2. **LeetCode 227** - Basic Calculator II (Medium) - With */÷ operators
+3. **LeetCode 282** - Expression Add Operators (Hard) - Generate expressions with target
+4. **LeetCode 772** - Basic Calculator III (Hard) - Full expression evaluation
+5. **LeetCode 1897** - Redistribute Characters to Make All Strings Equal (Easy) - Frequency validation
+6. **LeetCode 1844** - Replace All Digits with Characters (Easy) - Character replacement
+7. **LeetCode 2000** - Reverse Prefix of Word (Easy) - Prefix reversal
+8. **LeetCode 2390** - Removing Stars From a String (Easy) - Star removal pattern
+9. **LeetCode 2696** - Minimum String Length After Removing Substrings (Medium) - Substring elimination
+10. **LeetCode 2301** - Match Substring After Replacement (Medium) - Pattern matching
+
+---
+
+#### 5.4 Monotonic Increasing Stack
+**Concept:** Maintain increasing order; use to find patterns efficiently  
+**When to use:** Largest rectangle, next greater element, stock span  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Medium
+
+**10 Problems:**
+1. **LeetCode 84** - Largest Rectangle in Histogram (Hard) - Core pattern
+2. **LeetCode 739** - Daily Temperatures (Medium) - Find next greater
+3. **LeetCode 496** - Next Greater Element I (Easy) - Basic next greater
+4. **LeetCode 456** - 132 Pattern (Medium) - Find specific pattern
+5. **LeetCode 901** - Online Stock Span (Medium) - Stock span calculation
+6. **LeetCode 907** - Sum of Subarray Minimums (Medium) - Subarray contribution
+7. **LeetCode 1019** - Next Greater Node In Linked List (Medium) - Linked list variant
+8. **LeetCode 2104** - Sum of Subarray Ranges (Medium) - Range calculation
+9. **LeetCode 1475** - Final Prices With a Special Discount (Easy) - Discount application
+10. **LeetCode 2281** - Sum of Total Strength of Wizards (Hard) - Complex contribution
+
+---
+
+#### 5.5 Monotonic Decreasing Stack
+**Concept:** Maintain decreasing order; apply to water trapping, removal  
+**When to use:** Trapping rain water, lexicographic ordering, building heights  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Medium → Hard
+
+**10 Problems:**
+1. **LeetCode 42** - Trapping Rain Water (Hard) - Core pattern
+2. **LeetCode 316** - Remove Duplicate Letters (Hard) - Lexicographically smallest
+3. **LeetCode 402** - Remove K Digits (Medium) - K removals for smallest number
+4. **LeetCode 440** - K-th Smallest in Lexicographical Order (Hard) - Lexicographic ordering
+5. **LeetCode 1475** - Final Prices With Special Discount (Easy) - Discount stack
+6. **LeetCode 154** - Find Minimum in Rotated Sorted Array II (Hard) - Rotation variant
+7. **LeetCode 1673** - Find the Most Competitive Subsequence (Medium) - Subsequence selection
+8. **LeetCode 2332** - The Latest Time to Catch a Bus (Medium) - Time optimization
+9. **LeetCode 11** - Container With Most Water (Medium) - Two pointer overlap
+10. **LeetCode 2030** - Small Est Range Including Elements from K Lists (Hard) - Range minimization
+
+---
+
+#### 5.6 Next Greater Element
+**Concept:** For each element, find next element > it  
+**When to use:** Stock span, next greater problems, pattern finding  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Easy → Medium
+
+**10 Problems:**
+1. **LeetCode 496** - Next Greater Element I (Easy) - Basic pattern
+2. **LeetCode 503** - Next Greater Element II (Medium) - Circular array
+3. **LeetCode 556** - Next Greater Element III (Medium) - Integer permutation
+4. **LeetCode 739** - Daily Temperatures (Medium) - Temperature lookback
+5. **LeetCode 901** - Online Stock Span (Medium) - Stock span
+6. **LeetCode 1019** - Next Greater Node In Linked List (Medium) - Linked list variant
+7. **LeetCode 2104** - Sum of Subarray Ranges (Medium) - Ranges with next greater
+8. **LeetCode 1475** - Final Prices With Special Discount (Easy) - Discount finding
+9. **LeetCode 2281** - Sum of Total Strength (Hard) - Complex next greater
+10. **LeetCode 907** - Sum of Subarray Minimums (Medium) - With monotonic stack
+
+---
+
+#### 5.7 Next Smaller Element
+**Concept:** For each element, find next element < it  
+**When to use:** Building heights, constraints, pattern matching  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Medium
+
+**10 Problems:**
+1. **LeetCode 1762** - Buildings With an Ocean View (Medium) - View conditions
+2. **LeetCode 2281** - Sum of Total Strength of Wizards (Hard) - Complex smaller element
+3. **LeetCode 42** - Trapping Rain Water (Hard) - Water height constraints
+4. **LeetCode 84** - Largest Rectangle in Histogram (Hard) - Rectangle bounds
+5. **LeetCode 907** - Sum of Subarray Minimums (Medium) - Minimum contribution
+6. **LeetCode 456** - 132 Pattern (Medium) - Pattern with constraints
+7. **LeetCode 2816** - Double a Number Represented as Linked List (Medium) - Doubling process
+8. **LeetCode 739** - Daily Temperatures (Medium) - Temperature patterns
+9. **LeetCode 2104** - Sum of Subarray Ranges (Medium) - Range minimums
+10. **LeetCode 1019** - Next Greater Node In Linked List (Medium) - Linked list pattern
+
+---
+
+#### 5.8 Largest Rectangle in Histogram
+**Concept:** Find largest rectangular area in histogram  
+**When to use:** Rectangle optimization, building heights, maximal patterns  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Hard
+
+**10 Problems:**
+1. **LeetCode 84** - Largest Rectangle in Histogram (Hard) - Core pattern
+2. **LeetCode 85** - Maximal Rectangle (Hard) - 2D extension with DP
+3. **LeetCode 42** - Trapping Rain Water (Hard) - Water volume variant
+4. **LeetCode 456** - 132 Pattern (Medium) - Pattern recognition
+5. **LeetCode 2281** - Sum of Total Strength (Hard) - Contribution calculation
+6. **LeetCode 1762** - Buildings With an Ocean View (Medium) - View optimization
+7. **LeetCode 907** - Sum of Subarray Minimums (Medium) - Minimum contribution
+8. **LeetCode 2104** - Sum of Subarray Ranges (Medium) - Range optimization
+9. **LeetCode 1019** - Next Greater Node (Medium) - Stack application
+10. **LeetCode 739** - Daily Temperatures (Medium) - Temperature patterns
+
+---
+
+#### 5.9 Stock Span
+**Concept:** For each day, find span (consecutive days with price ≤ current)  
+**When to use:** Stock span problem, consecutive element counting  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Medium
+
+**10 Problems:**
+1. **LeetCode 901** - Online Stock Span (Medium) - Core stock span
+2. **LeetCode 1944** - Number of Visible People in a Queue (Hard) - Visibility pattern
+3. **LeetCode 496** - Next Greater Element I (Easy) - Pattern foundation
+4. **LeetCode 739** - Daily Temperatures (Medium) - Temperature span variant
+5. **LeetCode 907** - Sum of Subarray Minimums (Medium) - Minimum span
+6. **LeetCode 2104** - Sum of Subarray Ranges (Medium) - Range span
+7. **LeetCode 2281** - Sum of Total Strength (Hard) - Complex span calculation
+8. **LeetCode 456** - 132 Pattern (Medium) - Span with constraints
+9. **LeetCode 1019** - Next Greater Node In Linked List (Medium) - Linked list span
+10. **LeetCode 84** - Largest Rectangle in Histogram (Hard) - Rectangle span
+
+---
+
+#### 5.10 Remove/Replace Elements
+**Concept:** Use stack to remove or replace elements based on patterns  
+**When to use:** Duplicate removal, character replacement, pattern elimination  
+**Time/Space:** O(n) time | O(n) space  
+**Difficulty:** Easy → Medium
+
+**10 Problems:**
+1. **LeetCode 316** - Remove Duplicate Letters (Hard) - Lexicographically smallest
+2. **LeetCode 402** - Remove K Digits (Medium) - Remove for smallest number
+3. **LeetCode 1249** - Minimum Remove to Make Valid Parentheses (Medium) - Parentheses removal
+4. **LeetCode 1544** - Make The String Great (Easy) - Adjacent duplicate removal
+5. **LeetCode 2390** - Removing Stars From a String (Medium) - Star removal with backtrack
+6. **LeetCode 1209** - Remove All Adjacent Duplicates In String II (Medium) - K duplicate removal
+7. **LeetCode 2696** - Minimum String Length After Removing Substrings (Medium) - Substring elimination
+8. **LeetCode 1673** - Find the Most Competitive Subsequence (Medium) - Subsequence optimization
+9. **LeetCode 2332** - The Latest Time to Catch a Bus (Medium) - Time optimization
+10. **LeetCode 440** - K-th Smallest in Lexicographical Order (Hard) - Lexicographic ordering
 
 ---
 

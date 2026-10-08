@@ -1,5 +1,17 @@
 # DSA Learning Resources - Complete Index
 
+## ⚔️ "Which Pattern Do I Use?" — Pattern Comparisons
+
+**[pattern-comparisons/INDEX.md](./pattern-comparisons/INDEX.md)** - DECISION GUIDE
+- Two Pointers vs Sliding Window, Binary Search vs Linear Scan, DFS vs BFS vs Backtracking,
+  Shortest Path family (BFS/Dijkstra/Bellman-Ford/Floyd-Warshall), Greedy vs DP,
+  Memoization vs Tabulation, Union-Find vs DFS/BFS, Heap vs Sorting, Trie vs HashMap,
+  Monotonic Stack vs Recursion
+- Each file: side-by-side decision table + the **same problem solved both ways** in full Java, so you see exactly where the patterns diverge
+- **Use when:** you know the patterns individually but freeze on which one fits a given problem
+
+---
+
 ## 🎯 START HERE
 
 ### 🚀 New Complete Learning System (Updated Sept 2026)

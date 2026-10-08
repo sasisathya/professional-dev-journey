@@ -24,6 +24,16 @@ Comprehensive interview preparation materials for system design and technical in
   - Behavioral questions
   - Interview preparation tips
 
+### Behavioral & Leadership (Company-Agnostic)
+
+- **BEHAVIORAL-STAR-BANK.md**
+  - STAR framework and its common failure modes
+  - 11 reusable question categories (conflict, failure, leading without authority, ambiguity, deadlines, mentoring, disagree-and-commit, feedback, cross-team friction, technical achievement, why this company/why leaving)
+  - Fill-in-your-own-story templates with prompting questions per category, plus one clearly-labeled fictional example per category for calibration
+  - Google's "Googleyness & Leadership" signal, and how it differs from Amazon's Leadership Principles
+  - Calibrating stories for senior/staff scope of impact
+  - Prep checklist (6-8 stories, timing, quantified results)
+
 ## Topics Covered
 
 ### Backend (Node.js)
@@ -60,6 +70,7 @@ Comprehensive interview preparation materials for system design and technical in
 
 1. Start with **INTERVIEW-PREP-CURRICULUM.md** to understand what to learn
 2. Study **OKTA-HIRING-MANAGER-ROUND-QA.md** for specific interview questions
-3. Practice explaining concepts out loud
-4. Review trade-offs and design decisions
-5. Prepare examples from your own experience
+3. Work through **BEHAVIORAL-STAR-BANK.md** to build a reusable set of your own STAR stories
+4. Practice explaining concepts out loud
+5. Review trade-offs and design decisions
+6. Prepare examples from your own experience

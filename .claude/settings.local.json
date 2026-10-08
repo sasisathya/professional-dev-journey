@@ -12,9 +12,32 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)",
-      "Skill(claude-api)"
+      "Skill(claude-api)",
+      "Bash(gh pr *)",
+      "Bash(gh auth *)",
+      "Bash(mkdir -p /private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/2bcb7e6e-ad50-4048-a871-0fc6e187bfae/scratchpad/dp_check)",
+      "Bash(rm -f *.java)",
+      "Bash(python3)",
+      "Bash(mkdir -p /private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/2bcb7e6e-ad50-4048-a871-0fc6e187bfae/scratchpad/dsa_compare_check)",
+      "Bash(rm -f *.java *.class)",
+      "Bash(javac *.java)",
+      "Bash(mkdir -p /private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/2bcb7e6e-ad50-4048-a871-0fc6e187bfae/scratchpad/lld_check)",
+      "Bash(echo \"COMPILE_EXIT=$?\")",
+      "Bash(java MovieTicketBookingDemo)",
+      "Bash(chmod +x /private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/602b310d-3489-49af-b5ac-0b2761183993/scratchpad/scan_pii.sh)",
+      "Bash(/private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/602b310d-3489-49af-b5ac-0b2761183993/scratchpad/scan_pii.sh)",
+      "Bash(chmod +x /private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/602b310d-3489-49af-b5ac-0b2761183993/scratchpad/scan_real_pii.sh)",
+      "Bash(/private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/602b310d-3489-49af-b5ac-0b2761183993/scratchpad/scan_real_pii.sh)",
+      "Bash(chmod +x /private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/602b310d-3489-49af-b5ac-0b2761183993/scratchpad/final_pii_check.sh)",
+      "Bash(/private/tmp/claude-502/-Users-sajja-krishna-sasi-professional-dev-journey/602b310d-3489-49af-b5ac-0b2761183993/scratchpad/final_pii_check.sh)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "github",
+    "transformer",
+    "jira",
+    "confluence"
+  ]
 }

@@ -45,6 +45,7 @@ Every document here is built around that gap. The rules:
 | Document | Covers | Read it for |
 |---|---|---|
 | **[SpringBoot.md](./SpringBoot.md)** | IoC & bean lifecycle, auto-configuration, AOP proxies, JPA/N+1, transactions, security, Actuator | The self-invocation `@Transactional` trap and the N+1 problem — the two most-asked Spring failures. |
+| **[SQL.md](./SQL.md)** | B-tree indexes, clustered vs non-clustered, leftmost-prefix/covering indexes, EXPLAIN, join algorithms, ACID, isolation levels & anomalies, locking & deadlocks, normalization | Why "Repeatable Read" means different things on MySQL vs Postgres, and the deadlock/phantom-read war stories that show up in Oracle- and DB-heavy loops. |
 | **[MongoDB.md](./MongoDB.md)** | WiredTiger internals, index design (ESR rule), `explain()`, data modelling, replication, sharding | Shard-key selection and embed-vs-reference — decisions you must be able to defend. |
 | **[Redis.md](./Redis.md)** | Single-threaded model, data-structure encodings, eviction, persistence, Cluster, distributed locking | Why `KEYS` will take you down, and why Redlock is contested. |
 | **[Kafka.md](./Kafka.md)** | Log internals, producer/consumer semantics, rebalancing, ISR, delivery guarantees, compaction | Delivery semantics and rebalance storms — where Kafka answers usually collapse. |
